@@ -1,13 +1,25 @@
-import { StyleSheet, Text, View } from 'react-native';
-import { db } from '../../config/firebase';
+import { StyleSheet, View, Text } from 'react-native';
+import MapView, { Marker } from 'react-native-maps';
 
 export default function TabOneScreen() {
-  console.log('Firebase initialized:', db ? 'Success' : 'Failed');
-  
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Bathroom Finder</Text>
-      <Text style={styles.subtitle}>Firebase Connected ✅</Text>
+      <MapView
+        style={styles.map}
+        initialRegion={{
+          latitude: 37.78825,
+          longitude: -122.4324,
+          latitudeDelta: 0.0922,
+          longitudeDelta: 0.0421,
+        }}
+      >
+        <Marker
+          coordinate={{ latitude: 37.78825, longitude: -122.4324 }}
+          title="Test Bathroom"
+          description="This is a test marker"
+        />
+      </MapView>
+      <Text style={styles.title}>Bathroom Finder 🚻</Text>
     </View>
   );
 }
@@ -15,17 +27,24 @@ export default function TabOneScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
+  },
+  map: {
+    width: '100%',
+    height: '100%',
   },
   title: {
+    position: 'absolute',
+    top: 60,
+    alignSelf: 'center',
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: 'green',
+    backgroundColor: 'white',
+    padding: 10,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
 });
