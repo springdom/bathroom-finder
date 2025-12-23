@@ -8,7 +8,7 @@ const SAMPLE_BATHROOMS = [
   {
     id: '1',
     name: 'Starbucks Coffee',
-    latitude: null, // Will be set relative to user location
+    latitude: null,
     longitude: null,
     rating: 4.5,
     cleanliness: 4,
@@ -117,6 +117,30 @@ export default function TabOneScreen() {
     return '#ef4444'; // Red for poor
   };
 
+  // Format amenities for display
+  const formatAmenities = (amenities) => {
+    const amenityMap = {
+      wheelchair_accessible: '♿ Wheelchair',
+      baby_changing: '🚼 Baby Station',
+      free: '🆓 Free',
+      well_lit: '💡 Well Lit',
+    };
+    return amenities.map(a => amenityMap[a] || a).join(', ');
+  };
+
+  // Handle when user taps the callout
+  const handleViewDetails = (bathroom) => {
+    const amenitiesText = bathroom.amenities.length > 0 
+      ? `\n\nAmenities: ${formatAmenities(bathroom.amenities)}`
+      : '';
+    
+    Alert.alert(
+      bathroom.name,
+      `⭐ Rating: ${bathroom.rating}/5\n🧼 Cleanliness: ${bathroom.cleanliness}/5\n\n${bathroom.description}${amenitiesText}`,
+      [{ text: 'OK' }]
+    );
+  };
+
   return (
     <View style={styles.container}>
       <MapView
@@ -139,12 +163,13 @@ export default function TabOneScreen() {
               longitude: bathroom.longitude,
             }}
             title={bathroom.name}
-            description={`⭐ ${bathroom.rating} - ${bathroom.description}`}
+            description={`⭐ ${bathroom.rating}/5 | 🧼 Cleanliness: ${bathroom.cleanliness}/5\n${bathroom.description}`}
             pinColor={getMarkerColor(bathroom.rating)}
+            onCalloutPress={() => handleViewDetails(bathroom)}
           />
         ))}
       </MapView>
-      
+
       {/* Title and bathroom count */}
       <View style={styles.header}>
         <Text style={styles.title}>Bathroom Finder 🚻</Text>
