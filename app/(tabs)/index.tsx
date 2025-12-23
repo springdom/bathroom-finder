@@ -1,22 +1,64 @@
-import { StyleSheet, View, Text } from 'react-native';
+import { StyleSheet, View, Text, Alert } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
+import { useState, useEffect } from 'react';
+import * as Location from 'expo-location';
 
 export default function TabOneScreen() {
+  const [location, setLocation] = useState(null);
+  const [errorMsg, setErrorMsg] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      // Request location permissions
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setErrorMsg('Permission to access location was denied');
+        Alert.alert(
+          'Location Permission Required',
+          'Please enable location services to use this app.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      // Get current location
+      let currentLocation = await Location.getCurrentPositionAsync({});
+      setLocation(currentLocation);
+    })();
+  }, []);
+
+  // Show loading state while getting location
+  if (!location) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.loadingText}>
+          {errorMsg || 'Getting your location...'}
+        </Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <MapView
         style={styles.map}
         initialRegion={{
-          latitude: 37.78825,
-          longitude: -122.4324,
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
           latitudeDelta: 0.0922,
           longitudeDelta: 0.0421,
         }}
+        showsUserLocation={true}
+        showsMyLocationButton={true}
       >
+        {/* Test marker - we'll replace this with real bathrooms later */}
         <Marker
-          coordinate={{ latitude: 37.78825, longitude: -122.4324 }}
+          coordinate={{
+            latitude: location.coords.latitude + 0.01,
+            longitude: location.coords.longitude + 0.01,
+          }}
           title="Test Bathroom"
-          description="This is a test marker"
+          description="This is a test marker near you"
         />
       </MapView>
       <Text style={styles.title}>Bathroom Finder 🚻</Text>
@@ -27,6 +69,8 @@ export default function TabOneScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   map: {
     width: '100%',
@@ -46,5 +90,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
+  },
+  loadingText: {
+    fontSize: 18,
+    color: '#666',
   },
 });
