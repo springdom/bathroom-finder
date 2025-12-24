@@ -1,110 +1,107 @@
-import { StyleSheet, View, Text, Alert } from 'react-native';
+import { StyleSheet, View, Text, Alert, ActivityIndicator } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { useState, useEffect } from 'react';
 import * as Location from 'expo-location';
-
-// Sample bathroom data - we'll replace this with Firebase data later
-const SAMPLE_BATHROOMS = [
-  {
-    id: '1',
-    name: 'Starbucks Coffee',
-    latitude: null,
-    longitude: null,
-    rating: 4.5,
-    cleanliness: 4,
-    description: 'Clean bathroom, requires purchase',
-    amenities: ['wheelchair_accessible', 'baby_changing'],
-  },
-  {
-    id: '2',
-    name: 'City Mall - 2nd Floor',
-    latitude: null,
-    longitude: null,
-    rating: 4.0,
-    cleanliness: 4,
-    description: 'Public restroom, well maintained',
-    amenities: ['wheelchair_accessible', 'free'],
-  },
-  {
-    id: '3',
-    name: 'Central Park Public Restroom',
-    latitude: null,
-    longitude: null,
-    rating: 3.5,
-    cleanliness: 3,
-    description: 'Basic facilities, free to use',
-    amenities: ['free'],
-  },
-  {
-    id: '4',
-    name: 'Grand Hotel Lobby',
-    latitude: null,
-    longitude: null,
-    rating: 5.0,
-    cleanliness: 5,
-    description: 'Luxurious, spotlessly clean',
-    amenities: ['wheelchair_accessible', 'baby_changing', 'well_lit'],
-  },
-  {
-    id: '5',
-    name: 'Gas Station - Route 1',
-    latitude: null,
-    longitude: null,
-    rating: 2.5,
-    cleanliness: 2,
-    description: 'Basic, could be cleaner',
-    amenities: ['free'],
-  },
-];
+import { supabase } from '../../config/supabase';
 
 export default function TabOneScreen() {
   const [location, setLocation] = useState(null);
   const [bathrooms, setBathrooms] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState(null);
 
   useEffect(() => {
     (async () => {
-      // Request location permissions
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setErrorMsg('Permission to access location was denied');
-        Alert.alert(
-          'Location Permission Required',
-          'Please enable location services to use this app.',
-          [{ text: 'OK' }]
-        );
-        return;
+      try {
+        // Request location permissions
+        let { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          setErrorMsg('Permission to access location was denied');
+          Alert.alert(
+            'Location Permission Required',
+            'Please enable location services to use this app.',
+            [{ text: 'OK' }]
+          );
+          setLoading(false);
+          return;
+        }
+
+        // Get current location
+        let currentLocation = await Location.getCurrentPositionAsync({});
+        setLocation(currentLocation);
+
+        // Fetch bathrooms from Supabase
+        await fetchBathrooms(currentLocation);
+      } catch (error) {
+        console.error('Error in useEffect:', error);
+        setErrorMsg('Error loading data');
+        setLoading(false);
       }
-
-      // Get current location
-      let currentLocation = await Location.getCurrentPositionAsync({});
-      setLocation(currentLocation);
-
-      // Generate sample bathrooms around user's location
-      const bathroomsWithLocations = SAMPLE_BATHROOMS.map((bathroom, index) => {
-        // Spread bathrooms in a circle around user
-        const angle = (index * 360) / SAMPLE_BATHROOMS.length;
-        const radius = 0.01; // ~1km
-        const latOffset = radius * Math.cos((angle * Math.PI) / 180);
-        const lngOffset = radius * Math.sin((angle * Math.PI) / 180);
-
-        return {
-          ...bathroom,
-          latitude: currentLocation.coords.latitude + latOffset,
-          longitude: currentLocation.coords.longitude + lngOffset,
-        };
-      });
-
-      setBathrooms(bathroomsWithLocations);
     })();
   }, []);
 
-  // Show loading state while getting location
-  if (!location) {
+  const fetchBathrooms = async (userLocation) => {
+    try {
+      console.log('Fetching bathrooms from Supabase...');
+      
+      const { data, error } = await supabase
+        .from('bathrooms')
+        .select('*');
+
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+
+      console.log(`✅ Fetched ${data.length} bathrooms from Supabase`);
+
+      // Calculate distance for each bathroom
+      const bathroomsWithDistance = data.map(bathroom => ({
+        ...bathroom,
+        distance: calculateDistance(
+          userLocation.coords.latitude,
+          userLocation.coords.longitude,
+          bathroom.latitude,
+          bathroom.longitude
+        ),
+      }));
+
+      // Sort by distance
+      bathroomsWithDistance.sort((a, b) => a.distance - b.distance);
+
+      console.log('Bathrooms loaded:', bathroomsWithDistance);
+      setBathrooms(bathroomsWithDistance);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching bathrooms:', error);
+      setErrorMsg('Error loading bathrooms');
+      setLoading(false);
+    }
+  };
+
+  // Calculate distance between two coordinates (Haversine formula)
+  const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371; // Earth's radius in km
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * (Math.PI / 180)) *
+        Math.cos(lat2 * (Math.PI / 180)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const distance = R * c;
+    return distance; // Distance in km
+  };
+
+  // Show loading state
+  if (loading || !location) {
     return (
       <View style={styles.container}>
+        <ActivityIndicator size="large" color="#3b82f6" />
         <Text style={styles.loadingText}>
-          {errorMsg || 'Getting your location...'}
+          {errorMsg || 'Loading bathrooms...'}
         </Text>
       </View>
     );
@@ -119,6 +116,8 @@ export default function TabOneScreen() {
 
   // Format amenities for display
   const formatAmenities = (amenities) => {
+    if (!amenities || amenities.length === 0) return '';
+    
     const amenityMap = {
       wheelchair_accessible: '♿ Wheelchair',
       baby_changing: '🚼 Baby Station',
@@ -130,13 +129,17 @@ export default function TabOneScreen() {
 
   // Handle when user taps the callout
   const handleViewDetails = (bathroom) => {
-    const amenitiesText = bathroom.amenities.length > 0 
+    const amenitiesText = bathroom.amenities && bathroom.amenities.length > 0 
       ? `\n\nAmenities: ${formatAmenities(bathroom.amenities)}`
+      : '';
+    
+    const distanceText = bathroom.distance 
+      ? `\n📍 Distance: ${bathroom.distance.toFixed(2)} km away`
       : '';
     
     Alert.alert(
       bathroom.name,
-      `⭐ Rating: ${bathroom.rating}/5\n🧼 Cleanliness: ${bathroom.cleanliness}/5\n\n${bathroom.description}${amenitiesText}`,
+      `⭐ Rating: ${bathroom.rating}/5\n🧼 Cleanliness: ${bathroom.cleanliness}/5${distanceText}\n\n${bathroom.description}${amenitiesText}`,
       [{ text: 'OK' }]
     );
   };
@@ -148,13 +151,12 @@ export default function TabOneScreen() {
         initialRegion={{
           latitude: location.coords.latitude,
           longitude: location.coords.longitude,
-          latitudeDelta: 0.05,
-          longitudeDelta: 0.05,
+          latitudeDelta: 0.5,
+          longitudeDelta: 0.5,
         }}
         showsUserLocation={true}
         showsMyLocationButton={true}
       >
-        {/* Render bathroom markers */}
         {bathrooms.map((bathroom) => (
           <Marker
             key={bathroom.id}
@@ -170,10 +172,11 @@ export default function TabOneScreen() {
         ))}
       </MapView>
 
-      {/* Title and bathroom count */}
       <View style={styles.header}>
         <Text style={styles.title}>Bathroom Finder 🚻</Text>
-        <Text style={styles.subtitle}>{bathrooms.length} bathrooms nearby</Text>
+        <Text style={styles.subtitle}>
+          {bathrooms.length} bathroom{bathrooms.length !== 1 ? 's' : ''} found
+        </Text>
       </View>
     </View>
   );
@@ -215,5 +218,6 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 18,
     color: '#666',
+    marginTop: 10,
   },
 });

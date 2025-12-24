@@ -1,21 +1,25 @@
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+import { initializeApp } from 'firebase/app';
+import { initializeFirestore } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyD0zqklJ1e-36v_FZ2t3UswaC7vjZ0iORU",
-  authDomain: "bathroom-finder-12ffc.firebaseapp.com",
-  projectId: "bathroom-finder-12ffc",
-  storageBucket: "bathroom-finder-12ffc.firebasestorage.app",
-  messagingSenderId: "581559285498",
-  appId: "1:581559285498:web:4b74b99e91fd0f17bafb43",
-  measurementId: "G-S892VTHC10"
+  apiKey: "AIzaSyA0iqNNG6MaQsnlZ6rLjvFMW3gCO-j68lw",
+  authDomain: "bathroom-finder.firebaseapp.com",
+  projectId: "bathroom-finder",
+  storageBucket: "bathroom-finder.firebasestorage.app",
+  messagingSenderId: "899288851959",
+  appId: "1:899288851959:web:e7b7154da5acc6f77aa9df"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+
+// Initialize Firestore with minimum cache and force network first
+export const db = initializeFirestore(app, {
+  experimentalForceLongPolling: true,
+  useFetchStreams: false,
+  cacheSizeBytes: 1048576, // Minimum allowed (1MB)
+});
+
+export const auth = getAuth(app);
+
+console.log('Firebase initialized with minimal cache');
