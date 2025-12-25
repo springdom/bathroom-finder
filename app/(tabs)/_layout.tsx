@@ -11,6 +11,13 @@ export default function RootLayout() {
           presentation: 'card',
         }} 
       />
+      <Stack.Screen 
+        name="add-bathroom" 
+        options={{ 
+          headerShown: false,
+          presentation: 'modal',
+        }} 
+      />
     </Stack>
   );
 }

@@ -1,5 +1,5 @@
+import { StyleSheet, View, Text, Alert, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
-import { StyleSheet, View, Text, Alert, ActivityIndicator } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { useState, useEffect } from 'react';
 import * as Location from 'expo-location';
@@ -171,6 +171,14 @@ export default function TabOneScreen() {
           {bathrooms.length} bathroom{bathrooms.length !== 1 ? 's' : ''} found
         </Text>
       </View>
+
+      {/* Floating Action Button */}
+      <TouchableOpacity 
+        style={styles.fab}
+        onPress={() => router.push('/add-bathroom')}
+      >
+        <Text style={styles.fabIcon}>➕</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -212,5 +220,25 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#666',
     marginTop: 10,
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 30,
+    right: 20,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#3b82f6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 8,
+  },
+  fabIcon: {
+    fontSize: 28,
+    color: 'white',
   },
 });
