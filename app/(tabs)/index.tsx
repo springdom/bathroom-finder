@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { StyleSheet, View, Text, Alert, ActivityIndicator } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { useState, useEffect } from 'react';
@@ -9,6 +10,7 @@ export default function TabOneScreen() {
   const [bathrooms, setBathrooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState(null);
+  const router = useRouter();
 
   useEffect(() => {
     (async () => {
@@ -129,19 +131,10 @@ export default function TabOneScreen() {
 
   // Handle when user taps the callout
   const handleViewDetails = (bathroom) => {
-    const amenitiesText = bathroom.amenities && bathroom.amenities.length > 0 
-      ? `\n\nAmenities: ${formatAmenities(bathroom.amenities)}`
-      : '';
-    
-    const distanceText = bathroom.distance 
-      ? `\n📍 Distance: ${bathroom.distance.toFixed(2)} km away`
-      : '';
-    
-    Alert.alert(
-      bathroom.name,
-      `⭐ Rating: ${bathroom.rating}/5\n🧼 Cleanliness: ${bathroom.cleanliness}/5${distanceText}\n\n${bathroom.description}${amenitiesText}`,
-      [{ text: 'OK' }]
-    );
+    router.push({
+      pathname: '/bathroom-detail',
+      params: { bathroom: JSON.stringify(bathroom) }
+    });
   };
 
   return (
