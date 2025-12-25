@@ -1,4 +1,4 @@
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Linking, Share, Platform, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 export default function BathroomDetailScreen() {
@@ -37,6 +37,49 @@ export default function BathroomDetailScreen() {
     return stars;
   };
 
+  // Open directions in maps app
+  const handleGetDirections = () => {
+    const label = encodeURIComponent(bathroom.name);
+    const url = Platform.select({
+      ios: `maps:0,0?q=${label}@${bathroom.latitude},${bathroom.longitude}`,
+      android: `geo:0,0?q=${bathroom.latitude},${bathroom.longitude}(${label})`
+    });
+
+    Linking.canOpenURL(url)
+      .then((supported) => {
+        if (supported) {
+          return Linking.openURL(url);
+        } else {
+          // Fallback to Google Maps web
+          const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${bathroom.latitude},${bathroom.longitude}`;
+          return Linking.openURL(googleMapsUrl);
+        }
+      })
+      .catch((err) => {
+        console.error('Error opening maps:', err);
+        Alert.alert('Error', 'Could not open maps application');
+      });
+  };
+
+  // Share bathroom location
+  const handleShare = async () => {
+    try {
+      const message = `Check out this bathroom I found on Throne Tracker!\n\n🚻 ${bathroom.name}\n⭐ Rating: ${bathroom.rating}/5\n📍 ${bathroom.distance ? bathroom.distance.toFixed(2) + ' km away' : 'Location'}\n\n${bathroom.description || ''}\n\nhttps://www.google.com/maps/search/?api=1&query=${bathroom.latitude},${bathroom.longitude}`;
+
+      const result = await Share.share({
+        message: message,
+        title: `Share ${bathroom.name}`,
+      });
+
+      if (result.action === Share.sharedAction) {
+        console.log('Shared successfully');
+      }
+    } catch (error) {
+      console.error('Error sharing:', error);
+      Alert.alert('Error', 'Could not share bathroom');
+    }
+  };
+
   const amenitiesList = formatAmenities(bathroom.amenities);
 
   return (
@@ -59,6 +102,25 @@ export default function BathroomDetailScreen() {
           {bathroom.distance && (
             <Text style={styles.distance}>📍 {bathroom.distance.toFixed(2)} km away</Text>
           )}
+        </View>
+
+        {/* Action Buttons */}
+        <View style={styles.actionButtons}>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={handleGetDirections}
+          >
+            <Text style={styles.actionButtonIcon}>🗺️</Text>
+            <Text style={styles.actionButtonText}>Directions</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={handleShare}
+          >
+            <Text style={styles.actionButtonIcon}>📤</Text>
+            <Text style={styles.actionButtonText}>Share</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Overall Rating */}
@@ -167,6 +229,36 @@ const styles = StyleSheet.create({
   distance: {
     fontSize: 16,
     color: '#6b7280',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 15,
+  },
+  actionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'white',
+    padding: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+    borderWidth: 2,
+    borderColor: '#3b82f6',
+  },
+  actionButtonIcon: {
+    fontSize: 20,
+    marginRight: 8,
+  },
+  actionButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#3b82f6',
   },
   card: {
     backgroundColor: 'white',
