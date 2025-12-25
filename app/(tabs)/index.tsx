@@ -1,3 +1,5 @@
+import ErrorState from '../components/ErrorState';
+import LoadingState from '../components/LoadingState';
 import { StyleSheet, View, Text, Alert, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import MapView, { Marker } from 'react-native-maps';
@@ -108,14 +110,41 @@ export default function TabOneScreen() {
   };
 
   // Show loading state
-  if (loading || !location) {
+// Show loading state
+  if (loading) {
+    return <LoadingState message="Finding nearby bathrooms..." />;
+  }
+
+  // Show error state
+  if (errorMsg) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#3b82f6" />
-        <Text style={styles.loadingText}>
-          {errorMsg || 'Loading bathrooms...'}
-        </Text>
-      </View>
+      <ErrorState 
+        message={errorMsg}
+        onRetry={() => {
+          setLoading(true);
+          setErrorMsg(null);
+          Location.getCurrentPositionAsync({}).then(loc => {
+            setLocation(loc);
+            fetchBathrooms(loc);
+          });
+        }}
+      />
+    );
+  }
+
+  // Show error if no location
+  if (!location) {
+    return (
+      <ErrorState 
+        message="Unable to get your location. Please check your location permissions."
+        onRetry={() => {
+          setLoading(true);
+          Location.getCurrentPositionAsync({}).then(loc => {
+            setLocation(loc);
+            fetchBathrooms(loc);
+          });
+        }}
+      />
     );
   }
 
@@ -176,7 +205,7 @@ export default function TabOneScreen() {
       </MapView>
 
       <View style={styles.header}>
-        <Text style={styles.title}>Bathroom Finder 🚻</Text>
+        <Text style={styles.title}>Throne Tracker 🚽</Text>
         <Text style={styles.subtitle}>
           {bathrooms.length} bathroom{bathrooms.length !== 1 ? 's' : ''} found
         </Text>

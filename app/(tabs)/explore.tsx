@@ -5,13 +5,16 @@ import {
   ScrollView, 
   TouchableOpacity,
   ActivityIndicator,
-  Alert
+  Alert,
+  RefreshControl
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState, useEffect, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import { supabase } from '../../config/supabase';
+import ErrorState from '../components/ErrorState';
+import LoadingState from '../components/LoadingState';
 
 export default function ExploreScreen() {
   const router = useRouter();
@@ -28,6 +31,7 @@ export default function ExploreScreen() {
     maxDistance: 100,
     amenities: [],
   });
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -90,9 +94,26 @@ export default function ExploreScreen() {
       setLoading(false);
     } catch (error) {
       console.error('Error fetching bathrooms:', error);
-      setErrorMsg('Error loading bathrooms');
+      
+      // More specific error messages
+      if (error.message?.includes('network')) {
+        setErrorMsg('Network error. Please check your internet connection.');
+      } else if (error.message?.includes('timeout')) {
+        setErrorMsg('Request timed out. Please try again.');
+      } else {
+        setErrorMsg('Error loading bathrooms. Please try again.');
+      }
+      
       setLoading(false);
     }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    if (location) {
+      await fetchBathrooms(location);
+    }
+    setRefreshing(false);
   };
 
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
@@ -200,18 +221,54 @@ export default function ExploreScreen() {
     return stars || '☆';
   };
 
-  if (loading || !location) {
+  if (loading) {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Bathrooms</Text>
         </View>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3b82f6" />
-          <Text style={styles.loadingText}>
-            {errorMsg || 'Loading bathrooms...'}
-          </Text>
+        <LoadingState message="Loading bathrooms..." />
+      </View>
+    );
+  }
+
+  if (errorMsg) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Bathrooms</Text>
         </View>
+        <ErrorState 
+          message={errorMsg}
+          onRetry={() => {
+            setLoading(true);
+            setErrorMsg(null);
+            Location.getCurrentPositionAsync({}).then(loc => {
+              setLocation(loc);
+              fetchBathrooms(loc);
+            });
+          }}
+        />
+      </View>
+    );
+  }
+
+  if (!location) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Bathrooms</Text>
+        </View>
+        <ErrorState 
+          message="Unable to get your location"
+          onRetry={() => {
+            setLoading(true);
+            Location.getCurrentPositionAsync({}).then(loc => {
+              setLocation(loc);
+              fetchBathrooms(loc);
+            });
+          }}
+        />
       </View>
     );
   }
@@ -257,7 +314,17 @@ export default function ExploreScreen() {
         </View>
       </View>
 
-      <ScrollView style={styles.list}>
+      <ScrollView 
+        style={styles.list}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor="#3b82f6"
+            colors={['#3b82f6']}
+          />
+        }
+      >
         {/* Filter Button */}
         <View style={styles.filterButtonContainer}>
           <TouchableOpacity
@@ -473,16 +540,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
     marginTop: 4,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: '#6b7280',
   },
   sortContainer: {
     backgroundColor: 'white',
