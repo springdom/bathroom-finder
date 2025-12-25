@@ -1,9 +1,10 @@
 import { StyleSheet, View, Text, Alert, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import MapView, { Marker } from 'react-native-maps';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import * as Location from 'expo-location';
 import { supabase } from '../../config/supabase';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function TabOneScreen() {
   const [location, setLocation] = useState(null);
@@ -41,6 +42,15 @@ export default function TabOneScreen() {
       }
     })();
   }, []);
+
+  // Reload bathrooms when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      if (location) {
+        fetchBathrooms(location);
+      }
+    }, [location])
+  );
 
   const fetchBathrooms = async (userLocation) => {
     try {
