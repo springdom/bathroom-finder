@@ -1,112 +1,491 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { 
+  StyleSheet, 
+  View, 
+  Text, 
+  ScrollView, 
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert 
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import { useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import * as Location from 'expo-location';
+import { supabase } from '../../config/supabase';
 
-import { Collapsible } from '@/components/ui/collapsible';
-import { ExternalLink } from '@/components/external-link';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Fonts } from '@/constants/theme';
+export default function ExploreScreen() {
+  const router = useRouter();
+  const [location, setLocation] = useState(null);
+  const [bathrooms, setBathrooms] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState(null);
+  const [sortBy, setSortBy] = useState('distance'); // distance, rating, newest
 
-export default function TabTwoScreen() {
+  useEffect(() => {
+    (async () => {
+      try {
+        // Request location permissions
+        let { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          setErrorMsg('Permission to access location was denied');
+          Alert.alert(
+            'Location Permission Required',
+            'Please enable location services to use this app.',
+            [{ text: 'OK' }]
+          );
+          setLoading(false);
+          return;
+        }
+
+        // Get current location
+        let currentLocation = await Location.getCurrentPositionAsync({});
+        setLocation(currentLocation);
+
+        // Fetch bathrooms
+        await fetchBathrooms(currentLocation);
+      } catch (error) {
+        console.error('Error in useEffect:', error);
+        setErrorMsg('Error loading data');
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  // Reload bathrooms when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      if (location) {
+        fetchBathrooms(location);
+      }
+    }, [location])
+  );
+
+  const fetchBathrooms = async (userLocation) => {
+    try {
+      console.log('Fetching bathrooms for list view...');
+      
+      const { data, error } = await supabase
+        .from('bathrooms')
+        .select('*');
+
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+
+      console.log(`✅ Fetched ${data.length} bathrooms`);
+
+      // Calculate distance for each bathroom
+      const bathroomsWithDistance = data.map(bathroom => ({
+        ...bathroom,
+        distance: calculateDistance(
+          userLocation.coords.latitude,
+          userLocation.coords.longitude,
+          bathroom.latitude,
+          bathroom.longitude
+        ),
+      }));
+
+      // Sort bathrooms
+      sortBathrooms(bathroomsWithDistance, sortBy);
+
+      setBathrooms(bathroomsWithDistance);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching bathrooms:', error);
+      setErrorMsg('Error loading bathrooms');
+      setLoading(false);
+    }
+  };
+
+  // Calculate distance between two coordinates (Haversine formula)
+  const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371; // Earth's radius in km
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * (Math.PI / 180)) *
+        Math.cos(lat2 * (Math.PI / 180)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const distance = R * c;
+    return distance;
+  };
+
+  // Sort bathrooms based on selected criteria
+  const sortBathrooms = (bathroomsList, criteria) => {
+    switch (criteria) {
+      case 'distance':
+        bathroomsList.sort((a, b) => a.distance - b.distance);
+        break;
+      case 'rating':
+        bathroomsList.sort((a, b) => b.rating - a.rating);
+        break;
+      case 'newest':
+        bathroomsList.sort((a, b) => 
+          new Date(b.created_at) - new Date(a.created_at)
+        );
+        break;
+    }
+  };
+
+  // Handle sort change
+  const handleSortChange = (newSort) => {
+    setSortBy(newSort);
+    const sortedBathrooms = [...bathrooms];
+    sortBathrooms(sortedBathrooms, newSort);
+    setBathrooms(sortedBathrooms);
+  };
+
+  // Navigate to detail screen
+  const handleBathroomPress = (bathroom) => {
+    router.push({
+      pathname: '/bathroom-detail',
+      params: { bathroom: JSON.stringify(bathroom) }
+    });
+  };
+
+  // Get rating color
+  const getRatingColor = (rating) => {
+    if (rating >= 4.5) return '#10b981';
+    if (rating >= 3.5) return '#f59e0b';
+    return '#ef4444';
+  };
+
+  // Render stars
+  const renderStars = (rating) => {
+    const fullStars = Math.floor(rating);
+    let stars = '';
+    for (let i = 0; i < fullStars; i++) {
+      stars += '⭐';
+    }
+    return stars || '☆';
+  };
+
+  // Show loading state
+  if (loading || !location) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Bathrooms</Text>
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#3b82f6" />
+          <Text style={styles.loadingText}>
+            {errorMsg || 'Loading bathrooms...'}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText
-          type="title"
-          style={{
-            fontFamily: Fonts.rounded,
-          }}>
-          Explore
-        </ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image
-          source={require('@/assets/images/react-logo.png')}
-          style={{ width: 100, height: 100, alignSelf: 'center' }}
-        />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful{' '}
-          <ThemedText type="defaultSemiBold" style={{ fontFamily: Fonts.mono }}>
-            react-native-reanimated
-          </ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Bathrooms</Text>
+        <Text style={styles.headerSubtitle}>
+          {bathrooms.length} location{bathrooms.length !== 1 ? 's' : ''}
+        </Text>
+      </View>
+
+      {/* Sort Options */}
+      <View style={styles.sortContainer}>
+        <Text style={styles.sortLabel}>Sort by:</Text>
+        <View style={styles.sortButtons}>
+          <TouchableOpacity
+            style={[styles.sortButton, sortBy === 'distance' && styles.sortButtonActive]}
+            onPress={() => handleSortChange('distance')}
+          >
+            <Text style={[styles.sortButtonText, sortBy === 'distance' && styles.sortButtonTextActive]}>
+              Distance
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.sortButton, sortBy === 'rating' && styles.sortButtonActive]}
+            onPress={() => handleSortChange('rating')}
+          >
+            <Text style={[styles.sortButtonText, sortBy === 'rating' && styles.sortButtonTextActive]}>
+              Rating
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.sortButton, sortBy === 'newest' && styles.sortButtonActive]}
+            onPress={() => handleSortChange('newest')}
+          >
+            <Text style={[styles.sortButtonText, sortBy === 'newest' && styles.sortButtonTextActive]}>
+              Newest
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Bathroom List */}
+      <ScrollView style={styles.list}>
+        {bathrooms.map((bathroom) => (
+          <TouchableOpacity
+            key={bathroom.id}
+            style={styles.bathroomCard}
+            onPress={() => handleBathroomPress(bathroom)}
+          >
+            {/* Bathroom Name & Distance */}
+            <View style={styles.cardHeader}>
+              <Text style={styles.bathroomName} numberOfLines={1}>
+                🚻 {bathroom.name}
+              </Text>
+              <Text style={styles.distance}>
+                📍 {bathroom.distance.toFixed(1)} km
+              </Text>
+            </View>
+
+            {/* Rating */}
+            <View style={styles.ratingRow}>
+              <Text style={styles.stars}>{renderStars(bathroom.rating)}</Text>
+              <Text style={[styles.ratingText, { color: getRatingColor(bathroom.rating) }]}>
+                {bathroom.rating}/5
+              </Text>
+              <Text style={styles.separator}>•</Text>
+              <Text style={styles.cleanlinessText}>
+                🧼 {bathroom.cleanliness}/5
+              </Text>
+            </View>
+
+            {/* Description */}
+            {bathroom.description && (
+              <Text style={styles.description} numberOfLines={2}>
+                {bathroom.description}
+              </Text>
+            )}
+
+            {/* Amenities */}
+            {bathroom.amenities && bathroom.amenities.length > 0 && (
+              <View style={styles.amenitiesRow}>
+                {bathroom.amenities.slice(0, 3).map((amenity, index) => {
+                  const icons = {
+                    wheelchair_accessible: '♿',
+                    baby_changing: '🚼',
+                    free: '🆓',
+                    well_lit: '💡',
+                  };
+                  return (
+                    <Text key={index} style={styles.amenityIcon}>
+                      {icons[amenity] || '✓'}
+                    </Text>
+                  );
+                })}
+                {bathroom.amenities.length > 3 && (
+                  <Text style={styles.moreAmenities}>
+                    +{bathroom.amenities.length - 3}
+                  </Text>
+                )}
+              </View>
+            )}
+          </TouchableOpacity>
+        ))}
+
+        {/* Empty state */}
+        {bathrooms.length === 0 && (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateText}>No bathrooms found</Text>
+            <Text style={styles.emptyStateSubtext}>
+              Be the first to add one!
+            </Text>
+          </View>
+        )}
+      </ScrollView>
+
+      {/* Floating Action Button */}
+      <TouchableOpacity 
+        style={styles.fab}
+        onPress={() => router.push('/add-bathroom')}
+      >
+        <Text style={styles.fabIcon}>➕</Text>
+      </TouchableOpacity>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
   },
-  titleContainer: {
+  header: {
+    backgroundColor: 'white',
+    paddingTop: 60,
+    paddingBottom: 15,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#1f2937',
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginTop: 4,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#6b7280',
+  },
+  sortContainer: {
+    backgroundColor: 'white',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  sortLabel: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginBottom: 8,
+  },
+  sortButtons: {
     flexDirection: 'row',
     gap: 8,
+  },
+  sortButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#f3f4f6',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  sortButtonActive: {
+    backgroundColor: '#3b82f6',
+    borderColor: '#3b82f6',
+  },
+  sortButtonText: {
+    fontSize: 14,
+    color: '#6b7280',
+    fontWeight: '600',
+  },
+  sortButtonTextActive: {
+    color: 'white',
+  },
+  list: {
+    flex: 1,
+  },
+  bathroomCard: {
+    backgroundColor: 'white',
+    marginHorizontal: 15,
+    marginVertical: 8,
+    padding: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  bathroomName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1f2937',
+    flex: 1,
+    marginRight: 8,
+  },
+  distance: {
+    fontSize: 14,
+    color: '#6b7280',
+    fontWeight: '500',
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  stars: {
+    fontSize: 16,
+    marginRight: 4,
+  },
+  ratingText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  separator: {
+    fontSize: 14,
+    color: '#d1d5db',
+    marginHorizontal: 8,
+  },
+  cleanlinessText: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  description: {
+    fontSize: 14,
+    color: '#6b7280',
+    lineHeight: 20,
+    marginBottom: 8,
+  },
+  amenitiesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  amenityIcon: {
+    fontSize: 20,
+    marginRight: 6,
+  },
+  moreAmenities: {
+    fontSize: 12,
+    color: '#9ca3af',
+    marginLeft: 4,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  emptyStateText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#6b7280',
+    marginBottom: 8,
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    color: '#9ca3af',
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 30,
+    right: 20,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#3b82f6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 8,
+  },
+  fabIcon: {
+    fontSize: 28,
+    color: 'white',
   },
 });

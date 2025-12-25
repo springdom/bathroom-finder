@@ -1,23 +1,45 @@
-import { Stack } from 'expo-router';
+import { Tabs } from 'expo-router';
+import { Text } from 'react-native';
 
-export default function RootLayout() {
+export default function TabLayout() {
   return (
-    <Stack>
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen 
-        name="bathroom-detail" 
-        options={{ 
-          headerShown: false,
-          presentation: 'card',
-        }} 
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: '#3b82f6',
+        tabBarInactiveTintColor: '#9ca3af',
+        tabBarStyle: {
+          backgroundColor: 'white',
+          borderTopWidth: 1,
+          borderTopColor: '#e5e7eb',
+          height: 60,
+          paddingBottom: 8,
+          paddingTop: 8,
+        },
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: '600',
+        },
+      }}
+    >
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Map',
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 24 }}>🗺️</Text>
+          ),
+        }}
       />
-      <Stack.Screen 
-        name="add-bathroom" 
-        options={{ 
-          headerShown: false,
-          presentation: 'modal',
-        }} 
+      <Tabs.Screen
+        name="explore"
+        options={{
+          title: 'List',
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 24 }}>📋</Text>
+          ),
+        }}
       />
-    </Stack>
+    </Tabs>
   );
 }
