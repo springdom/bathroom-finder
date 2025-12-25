@@ -101,28 +101,62 @@ export default function AddBathroomScreen() {
       // Build amenities array from selected checkboxes
       const selectedAmenities = Object.keys(amenities).filter(key => amenities[key]);
 
-      const { data, error } = await supabase
+      // Step 1: Check if bathroom already exists at this location
+      const { data: existingBathrooms, error: searchError } = await supabase
         .from('bathrooms')
+        .select('*')
+        .eq('name', name.trim());
+
+      if (searchError) throw searchError;
+
+      let bathroomId;
+
+      if (existingBathrooms && existingBathrooms.length > 0) {
+        // Bathroom exists, use existing ID
+        bathroomId = existingBathrooms[0].id;
+        console.log('✅ Using existing bathroom:', bathroomId);
+      } else {
+        // Step 2: Insert new bathroom
+        const { data: bathroomData, error: bathroomError } = await supabase
+          .from('bathrooms')
+          .insert([
+            {
+              name: name.trim(),
+              latitude: location.coords.latitude,
+              longitude: location.coords.longitude,
+              amenities: selectedAmenities,
+            }
+          ])
+          .select()
+          .single();
+
+        if (bathroomError) throw bathroomError;
+
+        bathroomId = bathroomData.id;
+        console.log('✅ New bathroom created:', bathroomId);
+      }
+
+      // Step 3: Insert review for this bathroom
+      const { data: reviewData, error: reviewError } = await supabase
+        .from('reviews')
         .insert([
           {
-            name: name.trim(),
-            description: description.trim() || null,
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude,
+            bathroom_id: bathroomId,
             rating: overallRating,
             cleanliness: cleanlinessRating,
             amenities: selectedAmenities,
+            description: description.trim() || null,
           }
         ])
         .select();
 
-      if (error) throw error;
+      if (reviewError) throw reviewError;
 
-      console.log('✅ Bathroom added:', data);
+      console.log('✅ Review added:', reviewData);
       
       Alert.alert(
         'Success!',
-        'Bathroom has been added to the map.',
+        'Your review has been added.',
         [
           {
             text: 'OK',
@@ -131,8 +165,8 @@ export default function AddBathroomScreen() {
         ]
       );
     } catch (error) {
-      console.error('Error adding bathroom:', error);
-      Alert.alert('Error', 'Could not add bathroom. Please try again.');
+      console.error('Error adding review:', error);
+      Alert.alert('Error', 'Could not add review. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -191,7 +225,7 @@ export default function AddBathroomScreen() {
           >
             <Text style={styles.backButtonText}>✕ Cancel</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Add Bathroom</Text>
+          <Text style={styles.headerTitle}>Add Review</Text>
           <View style={styles.placeholder} />
         </View>
         <View style={styles.loadingContainer}>
@@ -213,7 +247,7 @@ export default function AddBathroomScreen() {
         >
           <Text style={styles.backButtonText}>✕ Cancel</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Add Bathroom</Text>
+        <Text style={styles.headerTitle}>Add Review</Text>
         <View style={styles.placeholder} />
       </View>
 
@@ -319,7 +353,7 @@ export default function AddBathroomScreen() {
           {loading ? (
             <ActivityIndicator color="white" />
           ) : (
-            <Text style={styles.submitButtonText}>Add Bathroom</Text>
+            <Text style={styles.submitButtonText}>Add Review</Text>
           )}
         </TouchableOpacity>
       </ScrollView>

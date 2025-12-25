@@ -71,15 +71,49 @@ export default function ExploreScreen() {
     try {
       console.log('Fetching bathrooms for list view...');
       
+      // Fetch bathrooms with their reviews
       const { data, error } = await supabase
         .from('bathrooms')
-        .select('*');
+        .select(`
+          *,
+          reviews (
+            id,
+            rating,
+            cleanliness,
+            amenities,
+            description,
+            created_at
+          )
+        `);
 
       if (error) throw error;
 
       console.log(`✅ Fetched ${data.length} bathrooms`);
 
-      const bathroomsWithDistance = data.map(bathroom => ({
+      // Calculate average ratings for each bathroom
+      const bathroomsWithRatings = data.map(bathroom => {
+        const reviews = bathroom.reviews || [];
+        const avgRating = reviews.length > 0
+          ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+          : 0;
+        const avgCleanliness = reviews.length > 0
+          ? reviews.reduce((sum, r) => sum + r.cleanliness, 0) / reviews.length
+          : 0;
+        
+        // Get most common amenities from reviews
+        const allAmenities = reviews.flatMap(r => r.amenities || []);
+        const uniqueAmenities = [...new Set(allAmenities)];
+        
+        return {
+          ...bathroom,
+          rating: avgRating,
+          cleanliness: avgCleanliness,
+          reviewCount: reviews.length,
+          amenities: uniqueAmenities,
+        };
+      });
+
+      const bathroomsWithDistance = bathroomsWithRatings.map(bathroom => ({
         ...bathroom,
         distance: calculateDistance(
           userLocation.coords.latitude,
@@ -95,7 +129,6 @@ export default function ExploreScreen() {
     } catch (error) {
       console.error('Error fetching bathrooms:', error);
       
-      // More specific error messages
       if (error.message?.includes('network')) {
         setErrorMsg('Network error. Please check your internet connection.');
       } else if (error.message?.includes('timeout')) {
@@ -325,7 +358,6 @@ export default function ExploreScreen() {
           />
         }
       >
-        {/* Filter Button */}
         <View style={styles.filterButtonContainer}>
           <TouchableOpacity
             style={[styles.filterButtonLarge, showFilters && styles.filterButtonActive]}
@@ -341,7 +373,6 @@ export default function ExploreScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Filter Panel */}
         {showFilters && (
           <View style={styles.filterPanel}>
             <View style={styles.filterSection}>
@@ -430,7 +461,6 @@ export default function ExploreScreen() {
           </View>
         )}
 
-        {/* Bathroom Cards */}
         {getFilteredBathrooms().map((bathroom) => (
           <TouchableOpacity
             key={bathroom.id}
@@ -449,19 +479,17 @@ export default function ExploreScreen() {
             <View style={styles.ratingRow}>
               <Text style={styles.stars}>{renderStars(bathroom.rating)}</Text>
               <Text style={[styles.ratingText, { color: getRatingColor(bathroom.rating) }]}>
-                {bathroom.rating}/5
+                {bathroom.rating > 0 ? bathroom.rating.toFixed(1) : '0'}/5
               </Text>
               <Text style={styles.separator}>•</Text>
               <Text style={styles.cleanlinessText}>
-                🧼 {bathroom.cleanliness}/5
+                🧼 {bathroom.cleanliness > 0 ? bathroom.cleanliness.toFixed(1) : '0'}/5
+              </Text>
+              <Text style={styles.separator}>•</Text>
+              <Text style={styles.reviewCount}>
+                {bathroom.reviewCount} review{bathroom.reviewCount !== 1 ? 's' : ''}
               </Text>
             </View>
-
-            {bathroom.description && (
-              <Text style={styles.description} numberOfLines={2}>
-                {bathroom.description}
-              </Text>
-            )}
 
             {bathroom.amenities && bathroom.amenities.length > 0 && (
               <View style={styles.amenitiesRow}>
@@ -751,11 +779,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
   },
-  description: {
-    fontSize: 14,
-    color: '#6b7280',
-    lineHeight: 20,
-    marginBottom: 8,
+  reviewCount: {
+    fontSize: 12,
+    color: '#9ca3af',
   },
   amenitiesRow: {
     flexDirection: 'row',

@@ -1,12 +1,12 @@
-import ErrorState from '../components/ErrorState';
-import LoadingState from '../components/LoadingState';
 import { StyleSheet, View, Text, Alert, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import MapView, { Marker } from 'react-native-maps';
 import { useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import { supabase } from '../../config/supabase';
-import { useFocusEffect } from '@react-navigation/native';
+import ErrorState from '../components/ErrorState';
+import LoadingState from '../components/LoadingState';
 
 export default function TabOneScreen() {
   const [location, setLocation] = useState(null);
@@ -58,9 +58,20 @@ export default function TabOneScreen() {
     try {
       console.log('Fetching bathrooms from Supabase...');
       
+      // Fetch bathrooms with their reviews
       const { data, error } = await supabase
         .from('bathrooms')
-        .select('*');
+        .select(`
+          *,
+          reviews (
+            id,
+            rating,
+            cleanliness,
+            amenities,
+            description,
+            created_at
+          )
+        `);
 
       if (error) {
         console.error('Supabase error:', error);
@@ -69,8 +80,26 @@ export default function TabOneScreen() {
 
       console.log(`✅ Fetched ${data.length} bathrooms from Supabase`);
 
+      // Calculate average ratings for each bathroom
+      const bathroomsWithRatings = data.map(bathroom => {
+        const reviews = bathroom.reviews || [];
+        const avgRating = reviews.length > 0
+          ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+          : 0;
+        const avgCleanliness = reviews.length > 0
+          ? reviews.reduce((sum, r) => sum + r.cleanliness, 0) / reviews.length
+          : 0;
+        
+        return {
+          ...bathroom,
+          rating: avgRating,
+          cleanliness: avgCleanliness,
+          reviewCount: reviews.length,
+        };
+      });
+
       // Calculate distance for each bathroom
-      const bathroomsWithDistance = data.map(bathroom => ({
+      const bathroomsWithDistance = bathroomsWithRatings.map(bathroom => ({
         ...bathroom,
         distance: calculateDistance(
           userLocation.coords.latitude,
@@ -88,7 +117,16 @@ export default function TabOneScreen() {
       setLoading(false);
     } catch (error) {
       console.error('Error fetching bathrooms:', error);
-      setErrorMsg('Error loading bathrooms');
+      
+      // More specific error messages
+      if (error.message?.includes('network')) {
+        setErrorMsg('Network error. Please check your internet connection.');
+      } else if (error.message?.includes('timeout')) {
+        setErrorMsg('Request timed out. Please try again.');
+      } else {
+        setErrorMsg('Error loading bathrooms. Please try again.');
+      }
+      
       setLoading(false);
     }
   };
@@ -110,7 +148,6 @@ export default function TabOneScreen() {
   };
 
   // Show loading state
-// Show loading state
   if (loading) {
     return <LoadingState message="Finding nearby bathrooms..." />;
   }
@@ -197,7 +234,7 @@ export default function TabOneScreen() {
               longitude: bathroom.longitude,
             }}
             title={bathroom.name}
-            description={`⭐ ${bathroom.rating}/5 | 🧼 Cleanliness: ${bathroom.cleanliness}/5\n${bathroom.description}`}
+            description={`⭐ ${bathroom.rating.toFixed(1)}/5 | 🧼 ${bathroom.cleanliness.toFixed(1)}/5 | ${bathroom.reviewCount} review${bathroom.reviewCount !== 1 ? 's' : ''}`}
             pinColor={getMarkerColor(bathroom.rating)}
             onCalloutPress={() => handleViewDetails(bathroom)}
           />
@@ -254,11 +291,6 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     color: '#666',
-  },
-  loadingText: {
-    fontSize: 18,
-    color: '#666',
-    marginTop: 10,
   },
   fab: {
     position: 'absolute',

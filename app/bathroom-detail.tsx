@@ -7,6 +7,10 @@ export default function BathroomDetailScreen() {
   
   // Parse the bathroom data from params
   const bathroom = JSON.parse(params.bathroom as string);
+  
+  // Get reviews from bathroom object
+  const reviews = bathroom.reviews || [];
+  const reviewCount = reviews.length;
 
   // Format amenities for display
   const formatAmenities = (amenities) => {
@@ -34,7 +38,7 @@ export default function BathroomDetailScreen() {
       stars += '⭐';
     }
     
-    return stars;
+    return stars || '☆';
   };
 
   // Open directions in maps app
@@ -64,7 +68,7 @@ export default function BathroomDetailScreen() {
   // Share bathroom location
   const handleShare = async () => {
     try {
-      const message = `Check out this bathroom I found on Throne Tracker!\n\n🚻 ${bathroom.name}\n⭐ Rating: ${bathroom.rating}/5\n📍 ${bathroom.distance ? bathroom.distance.toFixed(2) + ' km away' : 'Location'}\n\n${bathroom.description || ''}\n\nhttps://www.google.com/maps/search/?api=1&query=${bathroom.latitude},${bathroom.longitude}`;
+      const message = `Check out this bathroom I found on Throne Tracker!\n\n🚻 ${bathroom.name}\n⭐ Rating: ${bathroom.rating.toFixed(1)}/5\n📍 ${bathroom.distance ? bathroom.distance.toFixed(2) + ' km away' : 'Location'}\n\n${reviewCount} review${reviewCount !== 1 ? 's' : ''}\n\nhttps://www.google.com/maps/search/?api=1&query=${bathroom.latitude},${bathroom.longitude}`;
 
       const result = await Share.share({
         message: message,
@@ -90,7 +94,7 @@ export default function BathroomDetailScreen() {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Text style={styles.backButtonText}>← Back to Map</Text>
+          <Text style={styles.backButtonText}>← Back</Text>
         </TouchableOpacity>
       </View>
 
@@ -128,8 +132,11 @@ export default function BathroomDetailScreen() {
           <Text style={styles.cardTitle}>Overall Rating</Text>
           <View style={styles.ratingRow}>
             <Text style={styles.stars}>{renderStars(bathroom.rating)}</Text>
-            <Text style={styles.ratingText}>{bathroom.rating}/5</Text>
+            <Text style={styles.ratingText}>{bathroom.rating > 0 ? bathroom.rating.toFixed(1) : '0'}/5</Text>
           </View>
+          <Text style={styles.reviewCount}>
+            Based on {reviewCount} review{reviewCount !== 1 ? 's' : ''}
+          </Text>
         </View>
 
         {/* Cleanliness */}
@@ -137,9 +144,51 @@ export default function BathroomDetailScreen() {
           <Text style={styles.cardTitle}>🧼 Cleanliness</Text>
           <View style={styles.ratingRow}>
             <Text style={styles.stars}>{renderStars(bathroom.cleanliness)}</Text>
-            <Text style={styles.ratingText}>{bathroom.cleanliness}/5</Text>
+            <Text style={styles.ratingText}>{bathroom.cleanliness > 0 ? bathroom.cleanliness.toFixed(1) : '0'}/5</Text>
           </View>
         </View>
+
+        {/* All Reviews */}
+        {reviews.length > 0 && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Reviews ({reviews.length})</Text>
+            {reviews.map((review, index) => (
+              <View key={review.id} style={styles.reviewItem}>
+                <View style={styles.reviewHeader}>
+                  <View style={styles.reviewRatings}>
+                    <Text style={styles.reviewRating}>⭐ {review.rating}/5</Text>
+                    <Text style={styles.reviewSeparator}>•</Text>
+                    <Text style={styles.reviewRating}>🧼 {review.cleanliness}/5</Text>
+                  </View>
+                  <Text style={styles.reviewDate}>
+                    {new Date(review.created_at).toLocaleDateString()}
+                  </Text>
+                </View>
+                {review.description && (
+                  <Text style={styles.reviewDescription}>{review.description}</Text>
+                )}
+                {review.amenities && review.amenities.length > 0 && (
+                  <View style={styles.reviewAmenities}>
+                    {review.amenities.map((amenity, i) => {
+                      const icons = {
+                        wheelchair_accessible: '♿',
+                        baby_changing: '🚼',
+                        free: '🆓',
+                        well_lit: '💡',
+                      };
+                      return (
+                        <Text key={i} style={styles.reviewAmenityIcon}>
+                          {icons[amenity] || '✓'}
+                        </Text>
+                      );
+                    })}
+                  </View>
+                )}
+                {index < reviews.length - 1 && <View style={styles.reviewDivider} />}
+              </View>
+            ))}
+          </View>
+        )}
 
         {/* Amenities */}
         {amenitiesList.length > 0 && (
@@ -151,14 +200,6 @@ export default function BathroomDetailScreen() {
                 <Text style={styles.amenityLabel}>{amenity.label}</Text>
               </View>
             ))}
-          </View>
-        )}
-
-        {/* Description */}
-        {bathroom.description && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Description</Text>
-            <Text style={styles.description}>{bathroom.description}</Text>
           </View>
         )}
 
@@ -290,6 +331,56 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#4b5563',
   },
+  reviewCount: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginTop: 4,
+  },
+  reviewItem: {
+    marginTop: 12,
+  },
+  reviewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  reviewRatings: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  reviewRating: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#4b5563',
+  },
+  reviewSeparator: {
+    fontSize: 14,
+    color: '#d1d5db',
+    marginHorizontal: 6,
+  },
+  reviewDate: {
+    fontSize: 12,
+    color: '#9ca3af',
+  },
+  reviewDescription: {
+    fontSize: 14,
+    color: '#4b5563',
+    lineHeight: 20,
+    marginBottom: 8,
+  },
+  reviewAmenities: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  reviewAmenityIcon: {
+    fontSize: 18,
+  },
+  reviewDivider: {
+    height: 1,
+    backgroundColor: '#f3f4f6',
+    marginTop: 12,
+  },
   amenityRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -305,11 +396,6 @@ const styles = StyleSheet.create({
   amenityLabel: {
     fontSize: 16,
     color: '#4b5563',
-  },
-  description: {
-    fontSize: 16,
-    color: '#4b5563',
-    lineHeight: 24,
   },
   coordinates: {
     fontSize: 14,
