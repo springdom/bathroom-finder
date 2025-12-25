@@ -1,4 +1,4 @@
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Linking, Share, Platform, Alert } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Linking, Share, Platform, Alert, Clipboard } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 export default function BathroomDetailScreen() {
@@ -41,28 +41,63 @@ export default function BathroomDetailScreen() {
     return stars || '☆';
   };
 
-  // Open directions in maps app
+  // Open directions - let user choose app
+// Open directions - let user choose app
   const handleGetDirections = () => {
-    const label = encodeURIComponent(bathroom.name);
-    const url = Platform.select({
-      ios: `maps:0,0?q=${label}@${bathroom.latitude},${bathroom.longitude}`,
-      android: `geo:0,0?q=${bathroom.latitude},${bathroom.longitude}(${label})`
-    });
+    const { latitude, longitude, name } = bathroom;
+    const label = encodeURIComponent(name);
 
-    Linking.canOpenURL(url)
-      .then((supported) => {
-        if (supported) {
-          return Linking.openURL(url);
-        } else {
-          // Fallback to Google Maps web
-          const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${bathroom.latitude},${bathroom.longitude}`;
-          return Linking.openURL(googleMapsUrl);
-        }
-      })
-      .catch((err) => {
-        console.error('Error opening maps:', err);
-        Alert.alert('Error', 'Could not open maps application');
-      });
+    Alert.alert(
+      'Get Directions',
+      'Choose your navigation app',
+      [
+        {
+          text: 'Google Maps',
+          onPress: () => {
+            // Use place name for better search results
+            const url = Platform.select({
+              ios: `comgooglemaps://?daddr=${label}&center=${latitude},${longitude}`,
+              android: `google.navigation:q=${label}`,
+            });
+
+            Linking.canOpenURL(url).then((supported) => {
+              if (supported) {
+                Linking.openURL(url);
+              } else {
+                // Fallback to web with place name
+                Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${label}`);
+              }
+            }).catch(() => {
+              Alert.alert('Error', 'Could not open Google Maps');
+            });
+          },
+        },
+        {
+          text: 'Apple Maps',
+          onPress: () => {
+            // Apple Maps using place name
+            const url = Platform.select({
+              ios: `maps://?q=${label}&ll=${latitude},${longitude}`,
+              android: `geo:0,0?q=${label}`,
+            });
+            
+            Linking.openURL(url).catch(() => {
+              Alert.alert('Error', 'Could not open Apple Maps');
+            });
+          },
+        },
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+      ]
+    );
+  };
+
+  // Copy bathroom name to clipboard
+  const handleCopyName = () => {
+    Clipboard.setString(bathroom.name);
+    Alert.alert('Copied!', `"${bathroom.name}" copied to clipboard`);
   };
 
   // Share bathroom location
@@ -102,7 +137,15 @@ export default function BathroomDetailScreen() {
       <ScrollView style={styles.content}>
         {/* Bathroom name */}
         <View style={styles.titleSection}>
-          <Text style={styles.title}>🚻 {bathroom.name}</Text>
+          <View style={styles.titleRow}>
+            <Text style={styles.title}>🚻 {bathroom.name}</Text>
+            <TouchableOpacity 
+              style={styles.copyButton}
+              onPress={handleCopyName}
+            >
+              <Text style={styles.copyIcon}>📋</Text>
+            </TouchableOpacity>
+          </View>
           {bathroom.distance && (
             <Text style={styles.distance}>📍 {bathroom.distance.toFixed(2)} km away</Text>
           )}
@@ -261,11 +304,24 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 3,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#1f2937',
     marginBottom: 8,
+    flex: 1,
+  },
+  copyButton: {
+    padding: 8,
+    marginLeft: 8,
+  },
+  copyIcon: {
+    fontSize: 20,
   },
   distance: {
     fontSize: 16,
