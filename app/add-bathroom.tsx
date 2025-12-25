@@ -22,6 +22,18 @@ export default function AddBathroomScreen() {
   const [location, setLocation] = useState(null);
   const [loading, setLoading] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(true);
+  
+  // Ratings state
+  const [overallRating, setOverallRating] = useState(0);
+  const [cleanlinessRating, setCleanlinessRating] = useState(0);
+  
+  // Amenities state
+  const [amenities, setAmenities] = useState({
+    wheelchair_accessible: false,
+    baby_changing: false,
+    free: false,
+    well_lit: false,
+  });
 
   // Get user's current location when screen loads
   useEffect(() => {
@@ -46,10 +58,28 @@ export default function AddBathroomScreen() {
     })();
   }, []);
 
+  // Toggle amenity
+  const toggleAmenity = (amenity) => {
+    setAmenities(prev => ({
+      ...prev,
+      [amenity]: !prev[amenity]
+    }));
+  };
+
   // Validate form
   const validateForm = () => {
     if (!name.trim()) {
       Alert.alert('Missing Information', 'Please enter a bathroom name.');
+      return false;
+    }
+    
+    if (overallRating === 0) {
+      Alert.alert('Missing Rating', 'Please provide an overall rating.');
+      return false;
+    }
+    
+    if (cleanlinessRating === 0) {
+      Alert.alert('Missing Rating', 'Please provide a cleanliness rating.');
       return false;
     }
     
@@ -68,6 +98,9 @@ export default function AddBathroomScreen() {
     setLoading(true);
 
     try {
+      // Build amenities array from selected checkboxes
+      const selectedAmenities = Object.keys(amenities).filter(key => amenities[key]);
+
       const { data, error } = await supabase
         .from('bathrooms')
         .insert([
@@ -76,9 +109,9 @@ export default function AddBathroomScreen() {
             description: description.trim() || null,
             latitude: location.coords.latitude,
             longitude: location.coords.longitude,
-            rating: 0, // Default, will add star rating in Task #14
-            cleanliness: 0, // Default, will add star rating in Task #14
-            amenities: [], // Default, will add checklist in Task #15
+            rating: overallRating,
+            cleanliness: cleanlinessRating,
+            amenities: selectedAmenities,
           }
         ])
         .select();
@@ -103,6 +136,48 @@ export default function AddBathroomScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Star Rating Component
+  const StarRating = ({ rating, onRatingChange, label }) => {
+    return (
+      <View style={styles.starRatingContainer}>
+        <Text style={styles.starLabel}>{label}</Text>
+        <View style={styles.starsRow}>
+          {[1, 2, 3, 4, 5].map((star) => (
+            <TouchableOpacity
+              key={star}
+              onPress={() => onRatingChange(star)}
+              disabled={loading}
+            >
+              <Text style={styles.star}>
+                {star <= rating ? '⭐' : '☆'}
+              </Text>
+            </TouchableOpacity>
+          ))}
+          <Text style={styles.ratingText}>{rating}/5</Text>
+        </View>
+      </View>
+    );
+  };
+
+  // Amenity Checkbox Component
+  const AmenityCheckbox = ({ amenity, label, icon }) => {
+    const isChecked = amenities[amenity];
+    
+    return (
+      <TouchableOpacity
+        style={styles.checkboxRow}
+        onPress={() => toggleAmenity(amenity)}
+        disabled={loading}
+      >
+        <View style={[styles.checkbox, isChecked && styles.checkboxChecked]}>
+          {isChecked && <Text style={styles.checkmark}>✓</Text>}
+        </View>
+        <Text style={styles.amenityIcon}>{icon}</Text>
+        <Text style={styles.amenityLabel}>{label}</Text>
+      </TouchableOpacity>
+    );
   };
 
   // Show loading while getting location
@@ -191,20 +266,48 @@ export default function AddBathroomScreen() {
           />
         </View>
 
-        {/* Ratings Placeholder */}
+        {/* Ratings */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>⭐ Ratings</Text>
-          <Text style={styles.helperText}>
-            Star rating component coming in Task #14...
-          </Text>
+          <StarRating
+            label="Overall Rating *"
+            rating={overallRating}
+            onRatingChange={setOverallRating}
+          />
+          <StarRating
+            label="Cleanliness *"
+            rating={cleanlinessRating}
+            onRatingChange={setCleanlinessRating}
+          />
         </View>
 
-        {/* Amenities Placeholder */}
+        {/* Amenities */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>✓ Amenities</Text>
-          <Text style={styles.helperText}>
-            Amenities checklist coming in Task #15...
+          <Text style={styles.helperText} style={{ marginBottom: 12 }}>
+            Select all that apply:
           </Text>
+          
+          <AmenityCheckbox
+            amenity="wheelchair_accessible"
+            icon="♿"
+            label="Wheelchair Accessible"
+          />
+          <AmenityCheckbox
+            amenity="baby_changing"
+            icon="🚼"
+            label="Baby Changing Station"
+          />
+          <AmenityCheckbox
+            amenity="free"
+            icon="🆓"
+            label="Free to Use"
+          />
+          <AmenityCheckbox
+            amenity="well_lit"
+            icon="💡"
+            label="Well Lit"
+          />
         </View>
 
         {/* Submit Button */}
@@ -318,6 +421,64 @@ const styles = StyleSheet.create({
   textArea: {
     height: 100,
     textAlignVertical: 'top',
+  },
+  starRatingContainer: {
+    marginBottom: 16,
+  },
+  starLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  starsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  star: {
+    fontSize: 32,
+    marginRight: 4,
+  },
+  ratingText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6b7280',
+    marginLeft: 8,
+  },
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderWidth: 2,
+    borderColor: '#d1d5db',
+    borderRadius: 4,
+    marginRight: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: '#3b82f6',
+    borderColor: '#3b82f6',
+  },
+  checkmark: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  amenityIcon: {
+    fontSize: 24,
+    marginRight: 8,
+  },
+  amenityLabel: {
+    fontSize: 16,
+    color: '#374151',
+    flex: 1,
   },
   submitButton: {
     backgroundColor: '#3b82f6',
