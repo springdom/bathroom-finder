@@ -1,12 +1,14 @@
 import { StyleSheet, View, Text, Alert, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import MapView, { Marker } from 'react-native-maps';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import { supabase } from '../../config/supabase';
 import ErrorState from '../components/ErrorState';
 import LoadingState from '../components/LoadingState';
+import { eventEmitter, EVENTS } from '../../utils/events';
+
 
 export default function TabOneScreen() {
   const [location, setLocation] = useState(null);
@@ -14,6 +16,7 @@ export default function TabOneScreen() {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState(null);
   const router = useRouter();
+  const mapRef = useRef(null);
 
   useEffect(() => {
     (async () => {
@@ -44,7 +47,23 @@ export default function TabOneScreen() {
       }
     })();
   }, []);
+  // Add this NEW useEffect:
+  useEffect(() => {
+    // Listen for review added event
+    const handleReviewAdded = () => {
+      console.log('🔔 Review added event received - refreshing map');
+      if (location) {
+        fetchBathrooms(location);
+      }
+    };
 
+    eventEmitter.on(EVENTS.REVIEW_ADDED, handleReviewAdded);
+
+    // Cleanup
+    return () => {
+      eventEmitter.off(EVENTS.REVIEW_ADDED, handleReviewAdded);
+    };
+  }, [location]);
   // Reload bathrooms when screen comes into focus
   useFocusEffect(
     useCallback(() => {
@@ -213,9 +232,22 @@ export default function TabOneScreen() {
     });
   };
 
+    // Add this new function:
+  const handleRecenterMap = () => {
+    if (mapRef.current && location) {
+      mapRef.current.animateToRegion({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      }, 1000); // 1 second animation
+    }
+  };
+
   return (
     <View style={styles.container}>
       <MapView
+        ref={mapRef}
         style={styles.map}
         initialRegion={{
           latitude: location.coords.latitude,
@@ -248,10 +280,18 @@ export default function TabOneScreen() {
         </Text>
       </View>
 
+      {/* Recenter Button */}
+      <TouchableOpacity 
+        style={styles.recenterButton}
+        onPress={handleRecenterMap}
+      >
+        <Text style={styles.recenterIcon}>📍</Text>
+      </TouchableOpacity>
+
       {/* Floating Action Button */}
       <TouchableOpacity 
         style={styles.fab}
-        onPress={() => router.push('/add-bathroom')}
+        onPress={() => router.push('/add-review')}
       >
         <Text style={styles.fabIcon}>➕</Text>
       </TouchableOpacity>
@@ -311,5 +351,24 @@ const styles = StyleSheet.create({
   fabIcon: {
     fontSize: 28,
     color: 'white',
+  },
+  recenterButton: {
+    position: 'absolute',
+    bottom: 110,
+    right: 20,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'white',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 8,
+  },
+  recenterIcon: {
+    fontSize: 24,
   },
 });

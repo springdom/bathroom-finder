@@ -15,6 +15,8 @@ import * as Location from 'expo-location';
 import { supabase } from '../../config/supabase';
 import ErrorState from '../components/ErrorState';
 import LoadingState from '../components/LoadingState';
+import { eventEmitter, EVENTS } from '../../utils/events';
+
 
 export default function ExploreScreen() {
   const router = useRouter();
@@ -58,6 +60,24 @@ export default function ExploreScreen() {
       }
     })();
   }, []);
+
+    // Add this NEW useEffect:
+  useEffect(() => {
+    // Listen for review added event
+    const handleReviewAdded = () => {
+      console.log('🔔 Review added event received - refreshing list');
+      if (location) {
+        fetchBathrooms(location);
+      }
+    };
+
+    eventEmitter.on(EVENTS.REVIEW_ADDED, handleReviewAdded);
+
+    // Cleanup
+    return () => {
+      eventEmitter.off(EVENTS.REVIEW_ADDED, handleReviewAdded);
+    };
+  }, [location]);
 
   useFocusEffect(
     useCallback(() => {
@@ -538,7 +558,8 @@ export default function ExploreScreen() {
 
       <TouchableOpacity 
         style={styles.fab}
-        onPress={() => router.push('/add-bathroom')}
+        onPress={() => router.push('/add-review')}
+
       >
         <Text style={styles.fabIcon}>➕</Text>
       </TouchableOpacity>
