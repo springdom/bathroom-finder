@@ -1,5 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useState } from 'react';
 import { Alert, Clipboard, Image, Linking, Platform, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import ImageView from 'react-native-image-viewing';
 
 export default function BathroomDetailScreen() {
   const params = useLocalSearchParams();
@@ -8,9 +10,35 @@ export default function BathroomDetailScreen() {
   // Parse the bathroom data from params
   const bathroom = JSON.parse(params.bathroom as string);
   
+  // State for full-screen image viewer
+  const [imageViewerVisible, setImageViewerVisible] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [allImages, setAllImages] = useState<{uri: string}[]>([]);
+  
   // Get reviews from bathroom object
   const reviews = bathroom.reviews || [];
   const reviewCount = reviews.length;
+
+  // Open full-screen image viewer
+  const openImageViewer = (photoUrl: string, allReviewPhotos: string[]) => {
+    const images = allReviewPhotos.map(url => ({ uri: url }));
+    const index = allReviewPhotos.findIndex(url => url === photoUrl);
+    
+    setAllImages(images);
+    setCurrentImageIndex(index >= 0 ? index : 0);
+    setImageViewerVisible(true);
+  };
+
+  // Get all photos from all reviews for gallery
+  const getAllPhotos = () => {
+    const allPhotos: string[] = [];
+    reviews.forEach(review => {
+      if (review.photos && review.photos.length > 0) {
+        allPhotos.push(...review.photos);
+      }
+    });
+    return allPhotos;
+  };
 
   // Format amenities for display
   const formatAmenities = (amenities) => {
@@ -41,12 +69,10 @@ export default function BathroomDetailScreen() {
     return stars || '☆';
   };
 
-// Open directions - let user choose app
+  // Open directions - let user choose app
   const handleGetDirections = () => {
     const { latitude, longitude, name } = bathroom;
     const label = encodeURIComponent(name);
-
-  
 
     Alert.alert(
       'Get Directions',
@@ -55,7 +81,6 @@ export default function BathroomDetailScreen() {
         {
           text: 'Google Maps',
           onPress: () => {
-            // Use place name for better search results
             const url = Platform.select({
               ios: `comgooglemaps://?daddr=${label}&center=${latitude},${longitude}`,
               android: `google.navigation:q=${label}`,
@@ -65,7 +90,6 @@ export default function BathroomDetailScreen() {
               if (supported) {
                 Linking.openURL(url);
               } else {
-                // Fallback to web with place name
                 Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${label}`);
               }
             }).catch(() => {
@@ -76,7 +100,6 @@ export default function BathroomDetailScreen() {
         {
           text: 'Apple Maps',
           onPress: () => {
-            // Apple Maps using place name
             const url = Platform.select({
               ios: `maps://?q=${label}&ll=${latitude},${longitude}`,
               android: `geo:0,0?q=${label}`,
@@ -171,6 +194,32 @@ export default function BathroomDetailScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Photo Gallery */}
+        {getAllPhotos().length > 0 && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>📸 Photos ({getAllPhotos().length})</Text>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              style={styles.galleryScroll}
+            >
+              {getAllPhotos().map((photo, index) => (
+                <TouchableOpacity
+                  key={index}
+                  onPress={() => openImageViewer(photo, getAllPhotos())}
+                  style={styles.galleryPhoto}
+                >
+                  <Image
+                    source={{ uri: photo }}
+                    style={styles.galleryPhotoImage}
+                    resizeMode="cover"
+                  />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
         {/* Overall Rating */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Overall Rating</Text>
@@ -222,10 +271,7 @@ export default function BathroomDetailScreen() {
                     {review.photos.map((photo, photoIndex) => (
                       <TouchableOpacity
                         key={photoIndex}
-                        onPress={() => {
-                          // Could open full-screen image viewer here
-                          Alert.alert('Photo', 'Full-screen viewer coming soon!');
-                        }}
+                        onPress={() => openImageViewer(photo, review.photos)}
                       >
                         <Image
                           source={{ uri: photo }}
@@ -290,6 +336,14 @@ export default function BathroomDetailScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* Full-screen Image Viewer */}
+      <ImageView
+        images={allImages}
+        imageIndex={currentImageIndex}
+        visible={imageViewerVisible}
+        onRequestClose={() => setImageViewerVisible(false)}
+      />
     </View>
   );
 }
@@ -400,6 +454,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1f2937',
     marginBottom: 12,
+  },
+  galleryScroll: {
+    marginTop: 8,
+  },
+  galleryPhoto: {
+    marginRight: 12,
+  },
+  galleryPhotoImage: {
+    width: 150,
+    height: 150,
+    borderRadius: 12,
   },
   ratingRow: {
     flexDirection: 'row',
