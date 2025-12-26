@@ -1,13 +1,13 @@
-import { StyleSheet, View, Text, Alert, ActivityIndicator, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
-import MapView, { Marker } from 'react-native-maps';
-import { useState, useEffect, useCallback, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Location from 'expo-location';
+import { useRouter } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import MapView, { Marker } from 'react-native-maps';
 import { supabase } from '../../config/supabase';
+import { eventEmitter, EVENTS } from '../../utils/events';
 import ErrorState from '../components/ErrorState';
 import LoadingState from '../components/LoadingState';
-import { eventEmitter, EVENTS } from '../../utils/events';
 
 
 export default function TabOneScreen() {
@@ -88,6 +88,7 @@ export default function TabOneScreen() {
             cleanliness,
             amenities,
             description,
+            photos,
             created_at
           )
         `);

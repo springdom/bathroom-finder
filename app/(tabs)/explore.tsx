@@ -1,21 +1,20 @@
-import { 
-  StyleSheet, 
-  View, 
-  Text, 
-  ScrollView, 
-  TouchableOpacity,
-  ActivityIndicator,
-  Alert,
-  RefreshControl
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { useState, useEffect, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Location from 'expo-location';
+import { useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  Alert,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
 import { supabase } from '../../config/supabase';
+import { eventEmitter, EVENTS } from '../../utils/events';
 import ErrorState from '../components/ErrorState';
 import LoadingState from '../components/LoadingState';
-import { eventEmitter, EVENTS } from '../../utils/events';
 
 
 export default function ExploreScreen() {
@@ -102,6 +101,7 @@ export default function ExploreScreen() {
             cleanliness,
             amenities,
             description,
+            photos,
             created_at
           )
         `);

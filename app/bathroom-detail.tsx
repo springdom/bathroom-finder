@@ -1,8 +1,7 @@
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Linking, Share, Platform, Alert, Clipboard, Image, Dimensions } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Alert, Clipboard, Image, Linking, Platform, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function BathroomDetailScreen() {
-  const SCREEN_WIDTH = Dimensions.get('window').width;
   const params = useLocalSearchParams();
   const router = useRouter();
   
@@ -210,9 +209,6 @@ export default function BathroomDetailScreen() {
                   </Text>
                 </View>
                 {review.description && (
-                  <Text style={styles.reviewDescription}>{review.description}</Text>
-                )}
-{review.description && (
                   <Text style={styles.reviewDescription}>{review.description}</Text>
                 )}
                 
