@@ -23,6 +23,7 @@ export default function AddReviewScreen() {
   const [gettingLocation, setGettingLocation] = useState(true);
   const [nearbyPlaces, setNearbyPlaces] = useState([]);
   const [loadingPlaces, setLoadingPlaces] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   
   // Selected place
   const [selectedPlace, setSelectedPlace] = useState(null);
@@ -70,7 +71,7 @@ export default function AddReviewScreen() {
   const fetchNearbyPlaces = async (latitude, longitude) => {
     setLoadingPlaces(true);
     try {
-      const radius = 500; // 500 meters for testing (change to 100 for production)
+      const radius = 500; // 500 meters for testing
       const types = 'restaurant|cafe|shopping_mall|store|establishment';
       
       const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=${radius}&type=${types}&key=${GOOGLE_PLACES_API_KEY}`;
@@ -106,6 +107,20 @@ export default function AddReviewScreen() {
     } finally {
       setLoadingPlaces(false);
     }
+  };
+
+  // Filter places based on search query
+  const getFilteredPlaces = () => {
+    if (!searchQuery.trim()) {
+      return nearbyPlaces;
+    }
+
+    const query = searchQuery.toLowerCase();
+    return nearbyPlaces.filter(place => 
+      place.name.toLowerCase().includes(query) ||
+      place.vicinity.toLowerCase().includes(query) ||
+      (place.types && place.types.some(type => type.toLowerCase().includes(query)))
+    );
   };
 
   // Toggle amenity
@@ -308,7 +323,29 @@ export default function AddReviewScreen() {
             </Text>
           </View>
 
-          {nearbyPlaces.map((place) => (
+          {/* Search Bar */}
+          {nearbyPlaces.length > 0 && (
+            <View style={styles.searchContainer}>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="🔍 Search businesses..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity
+                  style={styles.clearSearchButton}
+                  onPress={() => setSearchQuery('')}
+                >
+                  <Text style={styles.clearSearchText}>✕</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
+          {getFilteredPlaces().map((place) => (
             <TouchableOpacity
               key={place.place_id}
               style={styles.placeCard}
@@ -326,6 +363,21 @@ export default function AddReviewScreen() {
               <Text style={styles.placeArrow}>→</Text>
             </TouchableOpacity>
           ))}
+
+          {getFilteredPlaces().length === 0 && nearbyPlaces.length > 0 && (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>No results for "{searchQuery}"</Text>
+              <Text style={styles.emptyStateSubtext}>
+                Try a different search term
+              </Text>
+              <TouchableOpacity
+                style={styles.clearSearchButtonLarge}
+                onPress={() => setSearchQuery('')}
+              >
+                <Text style={styles.clearSearchButtonText}>Clear Search</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {nearbyPlaces.length === 0 && (
             <View style={styles.emptyState}>
@@ -507,6 +559,54 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
     fontStyle: 'italic',
+  },
+  searchContainer: {
+    marginHorizontal: 15,
+    marginBottom: 12,
+    position: 'relative',
+  },
+  searchInput: {
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 16,
+    color: '#1f2937',
+    paddingRight: 45,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  clearSearchButton: {
+    position: 'absolute',
+    right: 12,
+    top: 12,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#e5e7eb',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  clearSearchText: {
+    fontSize: 16,
+    color: '#6b7280',
+    fontWeight: '600',
+  },
+  clearSearchButtonLarge: {
+    backgroundColor: '#3b82f6',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 12,
+  },
+  clearSearchButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
   },
   placeCard: {
     backgroundColor: 'white',
