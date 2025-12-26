@@ -14,6 +14,7 @@ import * as Location from 'expo-location';
 import { supabase } from '../config/supabase';
 import { GOOGLE_PLACES_API_KEY } from '../config/google-places';
 import { eventEmitter, EVENTS } from '../utils/events';
+import ImagePickerComponent from './components/ImagePicker';
 
 export default function AddReviewScreen() {
   const router = useRouter();
@@ -39,6 +40,7 @@ export default function AddReviewScreen() {
     well_lit: false,
   });
   const [loading, setLoading] = useState(false);
+  const [photos, setPhotos] = useState<string[]>([]);
 
   // Get user's location and fetch nearby places
   useEffect(() => {
@@ -207,6 +209,7 @@ export default function AddReviewScreen() {
             cleanliness: cleanlinessRating,
             amenities: selectedAmenities,
             description: description.trim() || null,
+            photos: photos.length > 0 ? photos : null,
           }
         ])
         .select();
@@ -428,6 +431,13 @@ export default function AddReviewScreen() {
             numberOfLines={4}
             editable={!loading}
             maxLength={500}
+          />
+          {/* Photos */}
+          <Text style={styles.label}>Photos (Optional)</Text>
+          <ImagePickerComponent
+            photos={photos}
+            onPhotosChange={setPhotos}
+            maxPhotos={3}
           />
         </View>
 

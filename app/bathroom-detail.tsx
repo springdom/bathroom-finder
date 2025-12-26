@@ -1,7 +1,8 @@
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Linking, Share, Platform, Alert, Clipboard } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Linking, Share, Platform, Alert, Clipboard, Image, Dimensions } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 export default function BathroomDetailScreen() {
+  const SCREEN_WIDTH = Dimensions.get('window').width;
   const params = useLocalSearchParams();
   const router = useRouter();
   
@@ -41,11 +42,12 @@ export default function BathroomDetailScreen() {
     return stars || '☆';
   };
 
-  // Open directions - let user choose app
 // Open directions - let user choose app
   const handleGetDirections = () => {
     const { latitude, longitude, name } = bathroom;
     const label = encodeURIComponent(name);
+
+  
 
     Alert.alert(
       'Get Directions',
@@ -210,6 +212,35 @@ export default function BathroomDetailScreen() {
                 {review.description && (
                   <Text style={styles.reviewDescription}>{review.description}</Text>
                 )}
+{review.description && (
+                  <Text style={styles.reviewDescription}>{review.description}</Text>
+                )}
+                
+                {/* Review Photos */}
+                {review.photos && review.photos.length > 0 && (
+                  <ScrollView 
+                    horizontal 
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.reviewPhotos}
+                  >
+                    {review.photos.map((photo, photoIndex) => (
+                      <TouchableOpacity
+                        key={photoIndex}
+                        onPress={() => {
+                          // Could open full-screen image viewer here
+                          Alert.alert('Photo', 'Full-screen viewer coming soon!');
+                        }}
+                      >
+                        <Image
+                          source={{ uri: photo }}
+                          style={styles.reviewPhoto}
+                          resizeMode="cover"
+                        />
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                )}
+                
                 {review.amenities && review.amenities.length > 0 && (
                   <View style={styles.reviewAmenities}>
                     {review.amenities.map((amenity, i) => {
@@ -428,6 +459,15 @@ const styles = StyleSheet.create({
   reviewAmenities: {
     flexDirection: 'row',
     gap: 6,
+  },
+  reviewPhotos: {
+    marginVertical: 8,
+  },
+  reviewPhoto: {
+    width: 120,
+    height: 120,
+    borderRadius: 8,
+    marginRight: 8,
   },
   reviewAmenityIcon: {
     fontSize: 18,

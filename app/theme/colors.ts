@@ -38,3 +38,4 @@ export const borderRadius = {
   lg: 16,
   full: 9999,
 };
+export default colors;
