@@ -24,13 +24,6 @@ export default function RootLayout() {
           }} 
         />
         <Stack.Screen 
-          name="add-bathroom" 
-          options={{ 
-            presentation: 'modal',
-            headerShown: false 
-          }} 
-        />
-        <Stack.Screen 
           name="add-review" 
           options={{ 
             presentation: 'modal',
