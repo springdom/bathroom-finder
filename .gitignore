@@ -31,6 +31,8 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
+.env.local
 .env*.local
 
 # typescript
@@ -42,5 +44,6 @@ app-example
 /ios
 /android
 
+# Config files with keys (backup - keep examples only)
 config/google-places.js
 config/supabase.js

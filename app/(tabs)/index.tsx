@@ -47,7 +47,6 @@ export default function TabOneScreen() {
       }
     })();
   }, []);
-  // Add this NEW useEffect:
   useEffect(() => {
     // Listen for review added event
     const handleReviewAdded = () => {
@@ -257,7 +256,7 @@ export default function TabOneScreen() {
           longitudeDelta: 0.5,
         }}
         showsUserLocation={true}
-        showsMyLocationButton={true}
+        showsMyLocationButton={false}
       >
         {bathrooms.map((bathroom) => (
           <Marker

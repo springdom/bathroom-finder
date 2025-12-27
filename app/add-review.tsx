@@ -1,18 +1,18 @@
-import { 
-  StyleSheet, 
-  View, 
-  Text, 
-  TouchableOpacity, 
-  ScrollView, 
-  TextInput,
-  Alert,
-  ActivityIndicator 
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { useState, useEffect } from 'react';
 import * as Location from 'expo-location';
-import { supabase } from '../config/supabase';
+import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from 'react-native';
 import { GOOGLE_PLACES_API_KEY } from '../config/google-places';
+import { supabase } from '../config/supabase';
 import { eventEmitter, EVENTS } from '../utils/events';
 import ImagePickerComponent from './components/ImagePicker';
 
@@ -34,11 +34,52 @@ export default function AddReviewScreen() {
   const [overallRating, setOverallRating] = useState(0);
   const [cleanlinessRating, setCleanlinessRating] = useState(0);
   const [amenities, setAmenities] = useState({
-    wheelchair_accessible: false,
-    baby_changing: false,
-    free: false,
-    well_lit: false,
-  });
+      // Essentials
+      running_water: false,
+      soap_available: false,
+      toilet_paper: false,
+      well_lit: false,
+      door_lock: false,
+      clean: false,
+      
+      // Access & Cost
+      free: false,
+      paid: false,
+      wheelchair_accessible: false,
+      unisex: false,
+      separate_facilities: false,
+      attendant_present: false,
+      
+      // Facilities
+      mirror: false,
+      full_length_mirror: false,
+      ventilation: false,
+      hand_sanitizer: false,
+      paper_towels: false,
+      baby_changing: false,
+      bucket_available: false,
+      waste_bin: false,
+      hook_for_bags: false,
+      
+      // Comfort
+      air_conditioning: false,
+      air_freshener: false,
+      lotion_available: false,
+      sanitary_products: false,
+      
+      // Toilet Type
+      western_toilet: false,
+      squat_toilet: false,
+      accessible_toilet: false,
+      shower_available: false,
+      
+      // Safety & Condition
+      safe_location: false,
+      privacy_intact: false,
+      regularly_cleaned: false,
+      working_fixtures: false,
+      emergency_light: false,
+    });
   const [loading, setLoading] = useState(false);
   const [photos, setPhotos] = useState<string[]>([]);
 
@@ -73,7 +114,7 @@ export default function AddReviewScreen() {
   const fetchNearbyPlaces = async (latitude, longitude) => {
     setLoadingPlaces(true);
     try {
-      const radius = 500; // 500 meters for testing
+      const radius = 100; // 100 meters for testing
       const types = 'restaurant|cafe|shopping_mall|store|establishment';
       
       const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=${radius}&type=${types}&key=${GOOGLE_PLACES_API_KEY}`;
@@ -88,7 +129,7 @@ export default function AddReviewScreen() {
         if (data.results.length === 0) {
           Alert.alert(
             'No Businesses Nearby',
-            'You must be within 500m of a business to add a review. Please move closer to a cafe, restaurant, or mall.',
+            'You must be within 100m of a business to add a review. Please move closer to a cafe, restaurant, or mall.',
             [{ text: 'OK', onPress: () => router.back() }]
           );
         }
@@ -96,7 +137,7 @@ export default function AddReviewScreen() {
         console.log('No businesses found within 500m');
         Alert.alert(
           'No Businesses Nearby',
-          'No cafes, restaurants, or malls found within 500m. Try moving to a more commercial area.',
+          'No cafes, restaurants, or malls found within 100m. Try moving to a more commercial area.',
           [{ text: 'OK', onPress: () => router.back() }]
         );
       } else {
@@ -322,7 +363,7 @@ export default function AddReviewScreen() {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>📍 Which business are you at?</Text>
             <Text style={styles.helperText}>
-              Select the business you want to review. You must be within 500m.
+              Select the business you want to review. You must be within 100m.
             </Text>
           </View>
 
@@ -456,33 +497,76 @@ export default function AddReviewScreen() {
           />
         </View>
 
-        {/* Amenities */}
+{/* Amenities */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>✓ Amenities</Text>
-          <Text style={styles.helperText} style={{ marginBottom: 12 }}>
+          <Text style={styles.helperText} style={{ marginBottom: 16 }}>
             Select all that apply:
           </Text>
           
-          <AmenityCheckbox
-            amenity="wheelchair_accessible"
-            icon="♿"
-            label="Wheelchair Accessible"
-          />
-          <AmenityCheckbox
-            amenity="baby_changing"
-            icon="🚼"
-            label="Baby Changing Station"
-          />
-          <AmenityCheckbox
-            amenity="free"
-            icon="🆓"
-            label="Free to Use"
-          />
-          <AmenityCheckbox
-            amenity="well_lit"
-            icon="💡"
-            label="Well Lit"
-          />
+          {/* Essentials */}
+          <View style={styles.amenitySection}>
+            <Text style={styles.amenitySectionTitle}>⭐ Essentials</Text>
+            <AmenityCheckbox amenity="running_water" icon="🚰" label="Running Water" />
+            <AmenityCheckbox amenity="soap_available" icon="🧼" label="Soap Available" />
+            <AmenityCheckbox amenity="toilet_paper" icon="🧻" label="Toilet Paper" />
+            <AmenityCheckbox amenity="well_lit" icon="💡" label="Well Lit" />
+            <AmenityCheckbox amenity="door_lock" icon="🔒" label="Door Lock Works" />
+            <AmenityCheckbox amenity="clean" icon="✨" label="Clean/Maintained" />
+          </View>
+
+          {/* Access & Cost */}
+          <View style={styles.amenitySection}>
+            <Text style={styles.amenitySectionTitle}>🚪 Access & Cost</Text>
+            <AmenityCheckbox amenity="free" icon="🆓" label="Free to Use" />
+            <AmenityCheckbox amenity="paid" icon="💰" label="Paid to Use" />
+            <AmenityCheckbox amenity="wheelchair_accessible" icon="♿" label="Wheelchair Accessible" />
+            <AmenityCheckbox amenity="unisex" icon="🚻" label="Unisex" />
+            <AmenityCheckbox amenity="separate_facilities" icon="🚪" label="Separate Men's/Women's" />
+            <AmenityCheckbox amenity="attendant_present" icon="🧑‍💼" label="Attendant Present" />
+          </View>
+
+          {/* Facilities */}
+          <View style={styles.amenitySection}>
+            <Text style={styles.amenitySectionTitle}>🛠️ Facilities</Text>
+            <AmenityCheckbox amenity="mirror" icon="🪞" label="Mirror" />
+            <AmenityCheckbox amenity="full_length_mirror" icon="🪞" label="Full-Length Mirror" />
+            <AmenityCheckbox amenity="ventilation" icon="🪟" label="Ventilation/Fan" />
+            <AmenityCheckbox amenity="hand_sanitizer" icon="🧴" label="Hand Sanitizer" />
+            <AmenityCheckbox amenity="paper_towels" icon="📄" label="Paper Towels/Hand Dryer" />
+            <AmenityCheckbox amenity="baby_changing" icon="🚼" label="Baby Changing Station" />
+            <AmenityCheckbox amenity="bucket_available" icon="🪣" label="Bucket/Water Barrel" />
+            <AmenityCheckbox amenity="waste_bin" icon="🗑️" label="Waste Bin" />
+            <AmenityCheckbox amenity="hook_for_bags" icon="🎒" label="Hook for Bags/Clothes" />
+          </View>
+
+          {/* Comfort */}
+          <View style={styles.amenitySection}>
+            <Text style={styles.amenitySectionTitle}>✨ Comfort</Text>
+            <AmenityCheckbox amenity="air_conditioning" icon="❄️" label="Air Conditioning" />
+            <AmenityCheckbox amenity="air_freshener" icon="🌸" label="Air Freshener" />
+            <AmenityCheckbox amenity="lotion_available" icon="🧴" label="Lotion/Hand Cream" />
+            <AmenityCheckbox amenity="sanitary_products" icon="🧽" label="Sanitary Products (Pads/Tampons)" />
+          </View>
+
+          {/* Toilet Type */}
+          <View style={styles.amenitySection}>
+            <Text style={styles.amenitySectionTitle}>🚽 Toilet Type</Text>
+            <AmenityCheckbox amenity="western_toilet" icon="🚽" label="Western Toilet (Sit-down)" />
+            <AmenityCheckbox amenity="squat_toilet" icon="🕳️" label="Squat Toilet" />
+            <AmenityCheckbox amenity="accessible_toilet" icon="♿" label="Accessible Toilet" />
+            <AmenityCheckbox amenity="shower_available" icon="🚿" label="Shower Available" />
+          </View>
+
+          {/* Safety & Condition */}
+          <View style={styles.amenitySection}>
+            <Text style={styles.amenitySectionTitle}>🛡️ Safety & Condition</Text>
+            <AmenityCheckbox amenity="safe_location" icon="👁️" label="Safe/Secure Location" />
+            <AmenityCheckbox amenity="privacy_intact" icon="🚪" label="Privacy (Intact Walls/Door)" />
+            <AmenityCheckbox amenity="regularly_cleaned" icon="🧹" label="Regularly Cleaned" />
+            <AmenityCheckbox amenity="working_fixtures" icon="👨‍🔧" label="Working Fixtures (Flush/Taps)" />
+            <AmenityCheckbox amenity="emergency_light" icon="🔦" label="Emergency/Backup Light" />
+          </View>
         </View>
 
         {/* Submit Button */}
@@ -690,6 +774,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#374151',
     marginBottom: 8,
+    marginTop: 16,
   },
   input: {
     backgroundColor: '#f9fafb',
@@ -727,12 +812,22 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     marginLeft: 8,
   },
+  amenitySection: {
+    marginBottom: 20,
+  },
+  amenitySectionTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1f2937',
+    marginBottom: 8,
+    paddingBottom: 8,
+    borderBottomWidth: 2,
+    borderBottomColor: '#e5e7eb',
+  },
   checkboxRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
+    paddingVertical: 10,
   },
   checkbox: {
     width: 24,
@@ -754,11 +849,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   amenityIcon: {
-    fontSize: 24,
+    fontSize: 22,
     marginRight: 8,
   },
   amenityLabel: {
-    fontSize: 16,
+    fontSize: 15,
     color: '#374151',
     flex: 1,
   },

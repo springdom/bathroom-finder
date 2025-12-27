@@ -3,34 +3,62 @@
     "name": "Throne Tracker",
     "slug": "throne-tracker",
     "version": "1.0.0",
-    "description": "Find clean, reliable bathrooms in Accra, Ghana. Rate and review bathrooms to help fellow travelers find the best facilities nearby.",
+    "description": "Find clean, reliable bathrooms in Accra. Rate and review bathrooms to help fellow travelers find the best facilities nearby.",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "myapp",
-    "userInterfaceStyle": "automatic",
+    "scheme": "thronetracker",
+    "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/images/icon.png",
+      "image": "./assets/images/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#3b82f6"
+      "backgroundColor": "#ffffff"
     },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.thronetracke.app"
+      "bundleIdentifier": "com.thronetracker.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Throne Tracker needs your location to find nearby bathrooms and verify reviews.",
+        "NSCameraUsageDescription": "Throne Tracker needs camera access to let you take photos of bathrooms for reviews.",
+        "NSPhotoLibraryUsageDescription": "Throne Tracker needs photo library access to let you add photos to reviews."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.thronetracker.app"
+      "package": "com.thronetracker.app",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
     },
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/icon.png"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Throne Tracker needs your location to find nearby bathrooms and verify reviews."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Throne Tracker needs access to your photos to add images to reviews.",
+          "cameraPermission": "Throne Tracker needs camera access to take photos of bathrooms."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

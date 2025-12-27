@@ -448,7 +448,11 @@ export default function ExploreScreen() {
                   { key: 'wheelchair_accessible', icon: '♿', label: 'Wheelchair' },
                   { key: 'baby_changing', icon: '🚼', label: 'Baby Changing' },
                   { key: 'free', icon: '🆓', label: 'Free' },
+                  { key: 'paid', icon: '💰', label: 'Paid' },
                   { key: 'well_lit', icon: '💡', label: 'Well Lit' },
+                  { key: 'clean', icon: '✨', label: 'Clean' },
+                  { key: 'running_water', icon: '🚰', label: 'Running Water' },
+                  { key: 'soap_available', icon: '🧼', label: 'Soap' },
                 ].map(({ key, icon, label }) => (
                   <TouchableOpacity
                     key={key}

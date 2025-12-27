@@ -41,14 +41,55 @@ export default function BathroomDetailScreen() {
   };
 
   // Format amenities for display
-  const formatAmenities = (amenities) => {
+const formatAmenities = (amenities) => {
     if (!amenities || amenities.length === 0) return [];
     
     const amenityMap = {
-      wheelchair_accessible: { icon: '♿', label: 'Wheelchair Accessible' },
-      baby_changing: { icon: '🚼', label: 'Baby Changing Station' },
-      free: { icon: '🆓', label: 'Free to Use' },
+      // Essentials
+      running_water: { icon: '🚰', label: 'Running Water' },
+      soap_available: { icon: '🧼', label: 'Soap Available' },
+      toilet_paper: { icon: '🧻', label: 'Toilet Paper' },
       well_lit: { icon: '💡', label: 'Well Lit' },
+      door_lock: { icon: '🔒', label: 'Door Lock Works' },
+      clean: { icon: '✨', label: 'Clean/Maintained' },
+      
+      // Access & Cost
+      free: { icon: '🆓', label: 'Free to Use' },
+      paid: { icon: '💰', label: 'Paid to Use' },
+      wheelchair_accessible: { icon: '♿', label: 'Wheelchair Accessible' },
+      unisex: { icon: '🚻', label: 'Unisex' },
+      separate_facilities: { icon: '🚪', label: 'Separate Men\'s/Women\'s' },
+      attendant_present: { icon: '🧑‍💼', label: 'Attendant Present' },
+      
+      // Facilities
+      mirror: { icon: '🪞', label: 'Mirror' },
+      full_length_mirror: { icon: '🪞', label: 'Full-Length Mirror' },
+      ventilation: { icon: '🪟', label: 'Ventilation/Fan' },
+      hand_sanitizer: { icon: '🧴', label: 'Hand Sanitizer' },
+      paper_towels: { icon: '📄', label: 'Paper Towels/Hand Dryer' },
+      baby_changing: { icon: '🚼', label: 'Baby Changing Station' },
+      bucket_available: { icon: '🪣', label: 'Bucket/Water Barrel' },
+      waste_bin: { icon: '🗑️', label: 'Waste Bin' },
+      hook_for_bags: { icon: '🎒', label: 'Hook for Bags' },
+      
+      // Comfort
+      air_conditioning: { icon: '❄️', label: 'Air Conditioning' },
+      air_freshener: { icon: '🌸', label: 'Air Freshener' },
+      lotion_available: { icon: '🧴', label: 'Lotion/Hand Cream' },
+      sanitary_products: { icon: '🧽', label: 'Sanitary Products' },
+      
+      // Toilet Type
+      western_toilet: { icon: '🚽', label: 'Western Toilet' },
+      squat_toilet: { icon: '🕳️', label: 'Squat Toilet' },
+      accessible_toilet: { icon: '♿', label: 'Accessible Toilet' },
+      shower_available: { icon: '🚿', label: 'Shower Available' },
+      
+      // Safety & Condition
+      safe_location: { icon: '👁️', label: 'Safe/Secure Location' },
+      privacy_intact: { icon: '🚪', label: 'Privacy' },
+      regularly_cleaned: { icon: '🧹', label: 'Regularly Cleaned' },
+      working_fixtures: { icon: '👨‍🔧', label: 'Working Fixtures' },
+      emergency_light: { icon: '🔦', label: 'Emergency Light' },
     };
     
     return amenities.map(a => amenityMap[a] || { icon: '✓', label: a });
@@ -283,14 +324,44 @@ export default function BathroomDetailScreen() {
                   </ScrollView>
                 )}
                 
-                {review.amenities && review.amenities.length > 0 && (
+{review.amenities && review.amenities.length > 0 && (
                   <View style={styles.reviewAmenities}>
                     {review.amenities.map((amenity, i) => {
                       const icons = {
-                        wheelchair_accessible: '♿',
-                        baby_changing: '🚼',
-                        free: '🆓',
+                        running_water: '🚰',
+                        soap_available: '🧼',
+                        toilet_paper: '🧻',
                         well_lit: '💡',
+                        door_lock: '🔒',
+                        clean: '✨',
+                        free: '🆓',
+                        paid: '💰',
+                        wheelchair_accessible: '♿',
+                        unisex: '🚻',
+                        separate_facilities: '🚪',
+                        attendant_present: '🧑‍💼',
+                        mirror: '🪞',
+                        full_length_mirror: '🪞',
+                        ventilation: '🪟',
+                        hand_sanitizer: '🧴',
+                        paper_towels: '📄',
+                        baby_changing: '🚼',
+                        bucket_available: '🪣',
+                        waste_bin: '🗑️',
+                        hook_for_bags: '🎒',
+                        air_conditioning: '❄️',
+                        air_freshener: '🌸',
+                        lotion_available: '🧴',
+                        sanitary_products: '🧽',
+                        western_toilet: '🚽',
+                        squat_toilet: '🕳️',
+                        accessible_toilet: '♿',
+                        shower_available: '🚿',
+                        safe_location: '👁️',
+                        privacy_intact: '🚪',
+                        regularly_cleaned: '🧹',
+                        working_fixtures: '👨‍🔧',
+                        emergency_light: '🔦',
                       };
                       return (
                         <Text key={i} style={styles.reviewAmenityIcon}>
@@ -307,17 +378,24 @@ export default function BathroomDetailScreen() {
         )}
 
         {/* Amenities */}
-        {amenitiesList.length > 0 && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Amenities</Text>
-            {amenitiesList.map((amenity, index) => (
-              <View key={index} style={styles.amenityRow}>
-                <Text style={styles.amenityIcon}>{amenity.icon}</Text>
-                <Text style={styles.amenityLabel}>{amenity.label}</Text>
-              </View>
-            ))}
-          </View>
-        )}
+        {(() => {
+          // Get all unique amenities from all reviews
+          const allReviewAmenities = reviews.flatMap(r => r.amenities || []);
+          const uniqueAmenities = [...new Set(allReviewAmenities)];
+          const amenitiesList = formatAmenities(uniqueAmenities);
+          
+          return amenitiesList.length > 0 ? (
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Amenities (From All Reviews)</Text>
+              {amenitiesList.map((amenity, index) => (
+                <View key={index} style={styles.amenityRow}>
+                  <Text style={styles.amenityIcon}>{amenity.icon}</Text>
+                  <Text style={styles.amenityLabel}>{amenity.label}</Text>
+                </View>
+              ))}
+            </View>
+          ) : null;
+        })()}
 
         {/* Location Info */}
         <View style={styles.card}>
