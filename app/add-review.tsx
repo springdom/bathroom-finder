@@ -1,3 +1,4 @@
+import { GOOGLE_PLACES_API_KEY } from '@env';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -11,7 +12,6 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-import { GOOGLE_PLACES_API_KEY } from '../config/google-places';
 import { supabase } from '../config/supabase';
 import { eventEmitter, EVENTS } from '../utils/events';
 import ImagePickerComponent from './components/ImagePicker';
@@ -114,7 +114,7 @@ export default function AddReviewScreen() {
   const fetchNearbyPlaces = async (latitude, longitude) => {
     setLoadingPlaces(true);
     try {
-      const radius = 100; // 100 meters for testing
+      const radius = 500; // 100 meters for testing
       const types = 'restaurant|cafe|shopping_mall|store|establishment';
       
       const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=${radius}&type=${types}&key=${GOOGLE_PLACES_API_KEY}`;
